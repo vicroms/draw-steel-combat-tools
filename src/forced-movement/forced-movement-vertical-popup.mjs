@@ -1,13 +1,15 @@
 export class VerticalDistancePopup extends ds.applications.api.DSApplication {
   #resolve    = null;
   #maxAbsVal  = 0;
+  #minVal     = null;
   #defaultVal = 0;
   #onPreview  = null;
 
-  constructor({ defaultVal, maxAbsVal }) {
+  constructor({ defaultVal, maxAbsVal, minVal = null }) {
     super();
     this.#defaultVal = defaultVal;
     this.#maxAbsVal  = maxAbsVal;
+    this.#minVal     = minVal;
   }
 
   static DEFAULT_OPTIONS = {
@@ -26,7 +28,7 @@ export class VerticalDistancePopup extends ds.applications.api.DSApplication {
     const ctx      = await super._prepareContext(options);
     ctx.defaultVal = this.#defaultVal;
     ctx.maxAbsVal  = this.#maxAbsVal;
-    ctx.minVal     = -this.#maxAbsVal;
+    ctx.minVal     = this.#minVal ?? -this.#maxAbsVal;
     return ctx;
   }
 
@@ -64,9 +66,9 @@ export class VerticalDistancePopup extends ds.applications.api.DSApplication {
     return super.close(options);
   }
 
-  static open(defaultVal, maxAbsVal, onPreview = null) {
+  static open(defaultVal, maxAbsVal, onPreview = null, minVal = null) {
     return new Promise(resolve => {
-      const app      = new VerticalDistancePopup({ defaultVal, maxAbsVal });
+      const app      = new VerticalDistancePopup({ defaultVal, maxAbsVal, minVal });
       app.#resolve   = resolve;
       app.#onPreview = onPreview;
       app.render(true);

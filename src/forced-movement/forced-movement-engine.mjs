@@ -1431,7 +1431,29 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
     const combinedPreview = (previewArrow || previewCollision)
       ? (v) => { previewArrow?.(v); previewCollision?.(v); }
       : null;
-    const chosen = await VerticalDistancePopup.open(0, Math.abs(reducedVert), combinedPreview);
+
+    let popupMax = Math.abs(reducedVert);
+    let popupMin = null;
+
+    if (type === 'Pull' && sourceToken) {
+      const elevDiffSquares = ((sourceToken.document.elevation ?? 0) - startElev) / canvas.grid.distance;
+      if (elevDiffSquares > 0) {
+        popupMin = 0;
+        popupMax = Math.min(popupMax, Math.round(elevDiffSquares));
+      } else if (elevDiffSquares < 0) {
+        popupMin = -Math.min(popupMax, Math.round(-elevDiffSquares));
+        popupMax = 0;
+      } else {
+        popupMin = 0;
+        popupMax = 0;
+      }
+      if (popupMin === 0 && popupMax === 0) {
+        reducedVert = 0;
+        isVertical  = false;
+      }
+    }
+
+    const chosen = !isVertical ? 0 : await VerticalDistancePopup.open(0, popupMax, combinedPreview, popupMin);
     destroyArrow();
     if (chosen === null) {
       ui.notifications.info(game.i18n.localize('DSCT.notice.fm.cancelled'));
