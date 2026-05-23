@@ -1902,7 +1902,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
               if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
               window._lastSquadDamagedTokenIds.add(blocker.id);
               clearTimeout(window._lastSquadDamagedTokenIdsTimer);
-              window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 2000);
+              window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 10000);
             }
             const blockerPrev = (noCollisionDamage && !juggernaut) ? null : await applyDamage(blocker.actor, blockerDmg, sharedGroup ? null : blockerSquadGroup);
             if (blockerPrev && sharedGroup && prevSharedHP !== null) {
@@ -2160,7 +2160,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
           if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
           window._lastSquadDamagedTokenIds.add(blocker.id);
           clearTimeout(window._lastSquadDamagedTokenIdsTimer);
-          window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 2000);
+          window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 10000);
         }
         const blockerPrev = (noCollisionDamage && !juggernaut) ? null : await applyDamage(blocker.actor, creatureDmg, sharedGroup ? null : blockerSquadGroup);
 

@@ -258,7 +258,7 @@ export const applyDamage = async (actor, amount, squadGroupOverride = undefined,
       if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
       window._lastSquadDamagedTokenIds.add(_dmgTokenId);
       clearTimeout(window._lastSquadDamagedTokenIdsTimer);
-      window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 2000);
+      window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, window._dsctFMActive ? 10000 : 2000);
     } else {
       console.log(`DSCT | DT | applyDamage: player client, reporting squad-damaged token ${_dmgTokenId} to GM via socket`);
       getModuleApi(false)?.socket?.executeAsGM('dsct.reportDamagedToken', _dmgTokenId, game.user.id);
@@ -503,8 +503,10 @@ export const chooseFreeSquare = (targetToken, landedOnToken = null) => new Promi
     return squares;
   };
 
+  const defeatedId = CONFIG.specialStatusEffects?.DEFEATED ?? 'dead';
   const isSquareFree = (gx, gy) => {
-    if (tokenAt(gx, gy, targetToken.id)) return false;
+    const tok = tokenAt(gx, gy, targetToken.id);
+    if (tok && !tok.actor?.statuses?.has(defeatedId)) return false;
     const t = tileAt(gx, gy);
     if (t && hasTags(t, 'obstacle') && !hasTags(t, 'broken')) return false;
     return true;

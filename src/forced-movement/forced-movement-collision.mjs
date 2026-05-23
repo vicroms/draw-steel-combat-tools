@@ -314,7 +314,8 @@ const applyFallDamage = async (targetToken, finalElev, landingGrid, agility, can
       await safeToggleStatusEffect(targetToken.actor, 'prone', { active: true });
       undoOps.push({ op: 'status', uuid: targetToken.actor.uuid, effectId: 'prone', active: false });
 
-      const landedOn = tokenAt(landingGrid.x, landingGrid.y, targetToken.id);
+      const _landedOnRaw = tokenAt(landingGrid.x, landingGrid.y, targetToken.id);
+      const landedOn = (_landedOnRaw && !isTokenDead(_landedOnRaw)) ? _landedOnRaw : null;
       if (landedOn) {
         undoOps.push({ op: 'update', uuid: landedOn.document.uuid, data: { x: landedOn.document.x, y: landedOn.document.y, elevation: landedOn.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
         await applyDamage(landedOn.actor, fallDmg);
@@ -411,7 +412,8 @@ const applyForcedFallDamage = async (targetToken, forcedDist, finalElev, landing
     await safeToggleStatusEffect(targetToken.actor, 'prone', { active: true });
     undoOps.push({ op: 'status', uuid: targetToken.actor.uuid, effectId: 'prone', active: false });
 
-    const landedOn = tokenAt(landingGrid.x, landingGrid.y, targetToken.id);
+    const _landedOnRaw = tokenAt(landingGrid.x, landingGrid.y, targetToken.id);
+    const landedOn = (_landedOnRaw && !isTokenDead(_landedOnRaw)) ? _landedOnRaw : null;
     if (landedOn) {
       undoOps.push({ op: 'update', uuid: landedOn.document.uuid, data: { x: landedOn.document.x, y: landedOn.document.y, elevation: landedOn.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
       await applyDamage(landedOn.actor, fallDmg);

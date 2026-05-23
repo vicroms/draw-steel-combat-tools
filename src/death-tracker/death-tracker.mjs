@@ -8,6 +8,7 @@ let _deathBatch = [];
 let _deathBatchTimer = null;
 const DEATH_BATCH_MS = 200;
 
+
 const _processTokenDeath = async (token, actor, { batchEntries = null } = {}) => {
   if (!window._deathTrackerLocks) window._deathTrackerLocks = new Set();
   if (window._deathTrackerLocks.has(token.id)) {
@@ -157,6 +158,7 @@ const _processTokenDeath = async (token, actor, { batchEntries = null } = {}) =>
   }
 };
 
+
 const _manualConfirm = (msg, step) => new Promise((resolve) => {
   
   const existing = msg.getFlag(M, 'manualDecision') ?? '';
@@ -180,6 +182,7 @@ const _manualConfirm = (msg, step) => new Promise((resolve) => {
     resolve(false);
   });
 });
+
 
 const _manualDecision = (msg, step) => new Promise((resolve) => {
   const parse = (d) => {
@@ -969,6 +972,7 @@ const _doReviveV3 = async ({ tokenIds, skipGroupHpRestore = false }) => {
   }
 };
 
+
 const _doReviveManual = async ({ tokenIds, label = 'DT Debug' }) => {
   if (!window._dsctManualReviveTokenIds) window._dsctManualReviveTokenIds = new Set();
   const defeatedStatusId = CONFIG.specialStatusEffects?.DEFEATED ?? 'dead';
@@ -1240,7 +1244,9 @@ const _doReviveManual = async ({ tokenIds, label = 'DT Debug' }) => {
   }
 };
 
+
 export const _SQUAD_COLORS = [0xFF4444, 0x4488FF, 0xAA44FF, 0xFFCC00, 0x00FFCC, 0xFF88AA];
+
 
 export const _runManualModePicker = (contexts) => new Promise((resolve) => {
   
@@ -1428,6 +1434,7 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
   }, 3000);
 });
 
+
 const _MANUAL_KILL_ACCUM_MS = 100;
 
 const _flushManualKillAccumulator = async () => {
@@ -1546,6 +1553,7 @@ const _flushManualKillAccumulator = async () => {
   }
 };
 
+
 const _queueManualKillTargets = (tokenIds, extraLines) => {
   if (!window._dsctManualKillAccumulator) {
     window._dsctManualKillAccumulator = { tokenIds: new Set(), extraLines: [], pickerContexts: [] };
@@ -1556,6 +1564,7 @@ const _queueManualKillTargets = (tokenIds, extraLines) => {
   if (acc.timer) clearTimeout(acc.timer);
   acc.timer = setTimeout(_flushManualKillAccumulator, _MANUAL_KILL_ACCUM_MS);
 };
+
 
 const _queueManualPickerContext = (ctx, extraLines) => {
   if (!window._dsctManualKillAccumulator) {
@@ -1568,10 +1577,11 @@ const _queueManualPickerContext = (ctx, extraLines) => {
   acc.timer = setTimeout(_flushManualKillAccumulator, _MANUAL_KILL_ACCUM_MS);
 };
 
-// One Must Die! One Must Die! One Must Die!
+
 const oneMustDie = (eligibleDamaged, extraLines) => {
   _queueManualKillTargets(new Set(eligibleDamaged), extraLines);
 };
+
 
 export const _addDamagedToken = (tokenId, userId = null) => {
   if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
@@ -1581,7 +1591,7 @@ export const _addDamagedToken = (tokenId, userId = null) => {
   window._lastSquadDamagedTokenIdsTimer = setTimeout(() => {
     window._lastSquadDamagedTokenIds = null;
     window._lastSquadDamageUserId    = null;
-  }, 2000);
+  }, window._dsctFMActive ? 10000 : 2000);
 };
 
 export function registerDeathTrackerHooks() {
@@ -2355,6 +2365,7 @@ export const runRaiseDeadUI = () => {
   document.addEventListener('keydown', onKey);
   document.addEventListener('contextmenu', onContextMenu);
 };
+
 
 export const reviveTokens = async (tokenIds, { skipGroupHpRestore = false } = {}) => {
   if (!game.users.activeGM?.isSelf) return;
