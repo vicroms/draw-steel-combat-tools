@@ -1568,6 +1568,7 @@ const _queueManualPickerContext = (ctx, extraLines) => {
   acc.timer = setTimeout(_flushManualKillAccumulator, _MANUAL_KILL_ACCUM_MS);
 };
 
+// One Must Die! One Must Die! One Must Die!
 const oneMustDie = (eligibleDamaged, extraLines) => {
   _queueManualKillTargets(new Set(eligibleDamaged), extraLines);
 };
