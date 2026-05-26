@@ -10,6 +10,7 @@ function pill(id, kind, amount, reason, src, scope, dsNative = false) {
   return { id, kind, amount, reason, src, srcTokenId: null, srcAbility: null, scope, enabled: true, custom: false, dsNative };
 }
 
+
 function _pickFlankingAlly(casterToken, targetToken, allies) {
   if (allies.length <= 1) return allies[0] ?? null;
   const tcx = targetToken.center.x, tcy = targetToken.center.y;
@@ -35,7 +36,9 @@ function _hasHighGround(casterToken, targetToken) {
   const gridSize = canvas.grid.size;
   const gridX = Math.floor(casterToken.document.x / gridSize);
   const gridY = Math.floor(casterToken.document.y / gridSize);
-  const terrainMap = canvas.scene?.getFlag('ds-terrain-designer', 'elevation-levels') ?? {};
+  const terrainMap = game.modules.get('ds-terrain-designer')?.active
+    ? (canvas.scene?.getFlag('ds-terrain-designer', 'elevation-levels') ?? {})
+    : {};
   const terrainElev = terrainMap[`${gridX},${gridY}`] ?? 0;
   return casterElev === terrainElev;
 }
@@ -58,6 +61,7 @@ function _buildGlobalPills(actor) {
   if (actor.statuses?.has('prone')) pills.push(pill(mkId('pr'), 'bane', 1, 'Prone', null, 'global', false));
   return pills;
 }
+
 
 function _buildNativeConditionTargetPills(actor, casterToken, targetActor, tokenId) {
   const pills = [];
@@ -180,9 +184,21 @@ function _buildTargetPills(app, tokenId) {
   
   
   
-  if (getSetting('highGroundEnabled') && casterToken && _hasHighGround(casterToken, targetToken)) {
+  
+  if (getSetting('highGroundEnabled') && casterToken) {
     const dstdActive = !!game.modules.get('ds-terrain-designer')?.active;
-    pills.push(pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, dstdActive));
+    if (_hasHighGround(casterToken, targetToken)) {
+      pills.push(pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, dstdActive));
+    } else if (dstdActive) {
+      const cElev = casterToken.document.elevation ?? 0;
+      const tElev = targetToken.document.elevation ?? 0;
+      const tSize = targetToken.actor?.system?.combat?.size?.value ?? 1;
+      if (cElev >= tElev + tSize) {
+        const p = pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, true);
+        p.enabled = false;
+        pills.push(p);
+      }
+    }
   }
 
   return pills;
@@ -254,6 +270,7 @@ function _buildModifierSources(app) {
   return pills;
 }
 
+
 function _recomputeAndSync(app) {
   const ctx    = app.options.context;
   if (!ctx?.modifiers) return;
@@ -311,6 +328,7 @@ function _recomputeAndSync(app) {
     }
   }
 }
+
 
 function _totalClass(val, kind) {
   if (val === 0) return 'dsct-total-zero';
@@ -507,6 +525,7 @@ function _updateTotalSpan(fg, scope, kind, val) {
   span.className   = `dsct-total-display ${_totalClass(val, kind)}`;
 }
 
+
 const M_ID = 'draw-steel-combat-tools';
 
 class DSCTAddModifierDialog extends ds.applications.api.DSApplication {
@@ -666,6 +685,7 @@ function _refreshTauntedPill(app) {
   app._dsctSources.push(p);
 }
 
+
 export function setBaneDialogLockWithOverlay(app, locked, reasons = []) {
   if (!app.element) return;
   if (!getSetting('rollDialogPillUI')) return;
@@ -719,6 +739,7 @@ export function injectJudgementBanePill(app) {
   _injectPillUI(app);
   return true;
 }
+
 
 export function registerRollDialogPillHooks() {
   if (!getSetting('abilityAutomationEnabled')) return;
