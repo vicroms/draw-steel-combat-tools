@@ -171,8 +171,22 @@ const _findCaptainlessSquads = (combat) => {
   });
 };
 
+const updateWithCaptainEffects = async () => {
+  if (!game.combat) return;
+  for (const squad of game.combat.groups?.contents ?? []) {
+    if (squad.type !== 'squad') continue;
+    const captain = squad.system.captain;
+    for (const minion of squad.system.minions) {
+      const captainEffect = minion.actor?.effects.getName('With Captain');
+      await captainEffect?.update({ disabled: !captain || captain.isDefeated });
+    }
+  }
+};
+
 let _relabelTimer = null;
 let _suppressGroupDeleteRelabel = false;
+let _suppressCaptainRelabel = false;
+const _captainFellSent = new Set();
 
 const _processCaptainQueue = async (groups, combat) => {
   for (const group of groups) {
@@ -208,7 +222,12 @@ const _processCaptainQueue = async (groups, combat) => {
     const oldGroup = chosenCombatant.group?.id !== group.id ? chosenCombatant.group : null;
 
     await combat.updateEmbeddedDocuments('Combatant', [{ _id: chosenCombatant.id, group: group.id }]);
-    await group.update({ 'system.captainId': chosenCombatant.id });
+    _suppressCaptainRelabel = true;
+    try {
+      await group.update({ 'system.captainId': chosenCombatant.id });
+    } finally {
+      _suppressCaptainRelabel = false;
+    }
 
     if (oldGroup && [...oldGroup.members].length === 0) {
       _suppressGroupDeleteRelabel = true;
@@ -221,6 +240,7 @@ const _processCaptainQueue = async (groups, combat) => {
     }
 
     await applySquadLabels();
+    await updateWithCaptainEffects();
 
     ChatMessage.create({ content: game.i18n.format('DSCT.chat.squads.newCaptain', {
       name: chosenToken.name, group: group.name,
@@ -241,6 +261,17 @@ export const registerSquadLabelHooks = () => {
       if (!token.actor) continue;
       const labels = token.actor.effects.filter(e => e.getFlag(M, 'effectType') === 'squad-label');
       if (!labels.length || combatantTokenIds.has(token.id)) continue;
+      for (const e of labels) await safeDelete(e);
+    }
+  });
+
+  Hooks.on('deleteCombat', async () => {
+    if (!game.users.activeGM?.isSelf) return;
+    if (!getSetting('autoSquadLabelsEnabled')) return;
+    await new Promise(r => setTimeout(r, 3000));
+    for (const token of canvas.tokens.placeables) {
+      if (!token.actor) continue;
+      const labels = token.actor.effects.filter(e => e.getFlag(M, 'effectType') === 'squad-label');
       for (const e of labels) await safeDelete(e);
     }
   });
@@ -274,6 +305,7 @@ export const registerSquadLabelHooks = () => {
       const captainless = _findCaptainlessSquads(combat);
       if (captainless.length) await _processCaptainQueue(captainless, combat);
     }
+    await updateWithCaptainEffects();
   });
 
   
@@ -310,9 +342,12 @@ export const registerSquadLabelHooks = () => {
       await group.update({ 'system.captainId': null });
       await applySquadLabels();
     } else if (combatant.system?.isCaptain) {
+      _captainFellSent.add(combatant.id);
+      setTimeout(() => _captainFellSent.delete(combatant.id), 2000);
       ChatMessage.create({ content: game.i18n.format('DSCT.chat.squads.captainFell', {
         name: combatant.actor?.name ?? combatant.name, group: group.name,
       }) });
+      await updateWithCaptainEffects();
     }
   });
 
@@ -328,18 +363,41 @@ export const registerSquadLabelHooks = () => {
     }, 250);
   });
 
+  
+  
+  Hooks.on('deleteCombatant', async (combatant) => {
+    if (!getSetting('autoSquadLabelsEnabled')) return;
+    if (!game.users.activeGM?.isSelf) return;
+    if (_captainFellSent.has(combatant.id)) return;
+    const group = combatant.group;
+    if (!group || group.type !== 'squad') return;
+    if (group.system?.captainId !== combatant.id) return;
+
+    _captainFellSent.add(combatant.id);
+    setTimeout(() => _captainFellSent.delete(combatant.id), 2000);
+    ChatMessage.create({ content: game.i18n.format('DSCT.chat.squads.captainFell', {
+      name: combatant.actor?.name ?? combatant.name, group: group.name,
+    }) });
+    await updateWithCaptainEffects();
+  });
+
   Hooks.on('updateCombatantGroup', async (group, changes) => {
     if (!getSetting('autoSquadLabelsEnabled') || !getSetting('squadLabelAutoRelabel')) return;
     if (!game.users.activeGM?.isSelf || !game.combat || !_labelsApplied()) return;
     if (changes.system?.captainId === undefined) return;
+    if (_suppressCaptainRelabel) return;
     await applySquadLabels();
+    await updateWithCaptainEffects();
   });
 
   Hooks.on('combatRound', async () => {
-    if (!getSetting('autoSquadLabelsEnabled') || !getSetting('squadLabelCaptainNow')) return;
+    if (!getSetting('autoSquadLabelsEnabled')) return;
     if (!game.users.activeGM?.isSelf || !game.combat || !_labelsApplied()) return;
 
-    const captainless = _findCaptainlessSquads(game.combat);
-    if (captainless.length) await _processCaptainQueue(captainless, game.combat);
+    if (getSetting('squadLabelCaptainNow')) {
+      const captainless = _findCaptainlessSquads(game.combat);
+      if (captainless.length) await _processCaptainQueue(captainless, game.combat);
+    }
+    await updateWithCaptainEffects();
   });
 };
