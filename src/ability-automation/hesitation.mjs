@@ -1,22 +1,19 @@
-import { getSetting, getItemDsid, getTokenById } from '../helpers.mjs';
+import { getSetting, getItemDsid } from '../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M   = 'draw-steel-combat-tools';
+const DBG = () => getSetting('debugMode');
+
 
 let hiwActivatedCombatantIds = new Set();
 
-function findHIWActor() {
-  for (const actor of game.actors) {
-    if (actor.type !== 'hero') continue;
+function findHIWActor(combat) {
+  for (const combatant of combat.combatants) {
+    const actor = combatant.actor;
+    if (!actor || actor.type !== 'hero' || combatant.defeated) continue;
     if (actor.items.some(i => getItemDsid(i) === 'hesitation-is-weakness' || i.name.toLowerCase() === 'hesitation is weakness'))
       return actor;
   }
   return null;
-}
-
-function getActorFromCombatant(combatant) {
-  const token = getTokenById(combatant.tokenId);
-  if (!token) return null;
-  return token.document?.actorLink ? game.actors.get(combatant.actorId) : token.actor;
 }
 
 async function markPendingHIWUsed(actorId) {
@@ -73,33 +70,34 @@ export const registerHIWHooks = () => {
     if (!getSetting('hiwEnabled')) return;
     if (!game.users.activeGM?.isSelf) return;
     if (!combat.started) return;
-    if (prior.round !== current.round) return; 
+    if (prior.round !== current.round) return;
 
-    
-    if (current.combatantId) return;
-    if (!prior.combatantId) return;
+    if (current.combatantId) { if (DBG()) console.log('DSCT | HIW: turn start event, skipping'); return; }
+    if (!prior.combatantId)  { if (DBG()) console.log('DSCT | HIW: no prior combatant'); return; }
+
+    if (DBG()) console.log('DSCT | HIW: turn end detected, prior combatantId:', prior.combatantId);
 
     const endedCombatant = combat.combatants.get(prior.combatantId);
-    if (!endedCombatant) return;
+    if (!endedCombatant) { if (DBG()) console.log('DSCT | HIW: endedCombatant not found'); return; }
 
-    
     const wasHIW = hiwActivatedCombatantIds.has(endedCombatant.id);
     hiwActivatedCombatantIds.delete(endedCombatant.id);
-    if (wasHIW) return;
+    if (wasHIW) { if (DBG()) console.log('DSCT | HIW: ended turn was a HIW activation, skipping'); return; }
 
-    const endedActor = getActorFromCombatant(endedCombatant);
-    if (!endedActor || endedActor.type !== 'hero') return;
+    const endedActor = endedCombatant.actor;
+    if (!endedActor || endedActor.type !== 'hero') { if (DBG()) console.log('DSCT | HIW: ended actor is not a hero:', endedActor?.name); return; }
 
-    const hiwActor = findHIWActor();
-    if (!hiwActor) return;
-    if (endedActor.id === hiwActor.id) return;
+    const hiwActor = findHIWActor(combat);
+    if (!hiwActor) { if (DBG()) console.log('DSCT | HIW: no HIW actor found in combat'); return; }
+    if (endedActor.id === hiwActor.id) { if (DBG()) console.log('DSCT | HIW: HIW actor ended their own turn'); return; }
 
-    
     const hiwCombatant = combat.combatants.find(c => c.actorId === hiwActor.id && !c.defeated);
-    if (!hiwCombatant || !(hiwCombatant.initiative > 0)) return;
+    if (!hiwCombatant || !(hiwCombatant.initiative > 0)) { if (DBG()) console.log('DSCT | HIW: HIW combatant already went (initiative:', hiwCombatant?.initiative, ')'); return; }
 
-    if ((hiwActor.system.hero?.primary?.value ?? 0) < 1) return;
+    const insight = hiwActor.system.hero?.primary?.value ?? 0;
+    if (insight < 1) { if (DBG()) console.log('DSCT | HIW: HIW actor has no Insight'); return; }
 
+    if (DBG()) console.log('DSCT | HIW: posting notification for', hiwActor.name);
     const priLabel = hiwActor.system.hero?.primary?.label ?? 'Insight';
     await ChatMessage.create({
       content: `<b><i class="fa-solid fa-bolt"></i> Hesitation Is Weakness:</b> ${hiwActor.name} may take their turn now (costs 1 ${priLabel}).`,
