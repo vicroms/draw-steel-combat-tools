@@ -10,6 +10,7 @@ import {
   HomeRulesSettingsMenu,
   CompatibilitySettingsMenu,
   SquadLabelsSettingsMenu,
+  CombatLogsSettingsMenu,
 } from './settings-menus.mjs';
 
 export const registerSettings = () => {
@@ -321,6 +322,21 @@ export const registerSettings = () => {
     hint: L('abilityAutomationSettings.hint'),
     icon: 'fas fa-wand-magic-sparkles', type: AbilityAutomationSettingsMenu, restricted: true,
   });
+
+  game.settings.registerMenu(M, 'combatLogsSettings', {
+    name: L('combatLogsSettings.name'), label: L('combatLogsSettings.label'),
+    hint: L('combatLogsSettings.hint'),
+    icon: 'fas fa-clipboard-list', type: CombatLogsSettingsMenu, restricted: true,
+  });
+  game.settings.register(M, 'combatTurnLog', {
+    name: L('combatTurnLog.name'), hint: L('combatTurnLog.hint'),
+    scope: 'world', config: false, type: Boolean, default: false,
+  });
+  game.settings.register(M, 'combatRoundLog', {
+    name: L('combatRoundLog.name'), hint: L('combatRoundLog.hint'),
+    scope: 'world', config: false, type: Boolean, default: false,
+  });
+
   game.settings.register(M, 'abilityAutomationEnabled', {
     name: L('abilityAutomationEnabled.name'), hint: L('abilityAutomationEnabled.hint'),
     scope: 'world', config: false, type: Boolean, default: true,

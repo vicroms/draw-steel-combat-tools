@@ -187,6 +187,11 @@
         "name": "Death Marker Icon",
         "hint": "Icon for the Death Marker tile."
       },
+      "combatLogsSettings": {
+        "name": "Combat Logs",
+        "label": "Configure Combat Logs",
+        "hint": "Configure combat event logging to the chat window."
+      },
       "squadLabelsSettings": {
         "name": "Squad Labels Settings",
         "label": "Configure Squad Labels",
@@ -273,7 +278,15 @@
       },
       "hiwEnabled": {
         "name": "Hesitation Is Weakness",
-        "hint": "Posts a chat notification with a Start Turn button when another hero ends their turn and the Hesitation Is Weakness ability can be triggered, may require pressing \"End Turn\" twice after a player turn ends."
+        "hint": "Posts a chat notification with a Start Turn button when another hero ends their turn and the Hesitation Is Weakness ability can be triggered."
+      },
+      "combatTurnLog": {
+        "name": "Combat Turn Log",
+        "hint": "Posts a chat message each time a combatant starts or ends their turn."
+      },
+      "combatRoundLog": {
+        "name": "Combat Round Log",
+        "hint": "Posts a chat message at the start of each new combat round."
       },
       "purifyingFireEnabled": {
         "name": "Purifying Fire",
@@ -417,7 +430,8 @@
         "VerticalDistance": "Vertical Distance",
         "HomeRulesSettings": "Home Rules",
         "CompatibilitySettings": "Compatibility",
-        "SquadLabelsSettings": "Squad Labels Settings"
+        "SquadLabelsSettings": "Squad Labels Settings",
+        "CombatLogsSettings": "Combat Logs"
       },
       "fm": {
         "noTarget": "No Target",

@@ -143,6 +143,7 @@ class SettingsSubmenu extends ds.applications.api.DSApplication {
   }
 }
 
+
 const header = (label) => ({ isSectionHeader: true, label });
 const compatInfo = (moduleId, nameKey, hintKey) => ({
   isInfo: true,
@@ -580,6 +581,17 @@ export class CompatibilitySettingsMenu extends SettingsSubmenu {
     return super.render(...args);
   }
 
+}
+
+export class CombatLogsSettingsMenu extends SettingsSubmenu {
+  static DEFAULT_OPTIONS = {
+    id:     'dsct-combat-logs-settings',
+    window: { title: 'DSCT.panel.title.CombatLogsSettings' },
+  };
+
+  static get regularKeys() {
+    return ['combatTurnLog', 'combatRoundLog'];
+  }
 }
 
 export class SquadLabelsSettingsMenu extends SettingsSubmenu {

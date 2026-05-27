@@ -23,6 +23,7 @@ import { registerSystemPatches } from './system-patches.mjs';
 import { registerRollDialogPillHooks, setBaneDialogLockWithOverlay, injectJudgementBanePill } from './ability-automation/roll-dialog-hooks.mjs';
 import { registerDstdCompat, runDstdUndoRevival } from './compat/dstd-compat.mjs';
 import { registerHealthEstimateCompat } from './compat/health-estimate-compat.mjs';
+import { registerCombatLogHooks } from './combat-logs.mjs';
 
 const api = {
   forcedMovement:   runForcedMovement,
@@ -86,6 +87,7 @@ Hooks.once('init', () => {
   registerTeleportHooks();
   registerCrossfadeHooks();
   registerHIWHooks();
+  registerCombatLogHooks();
   registerSystemPatches();
   registerDefeatedTokenVisibility();
   registerRollDialogPillHooks();
