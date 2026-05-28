@@ -49,13 +49,36 @@ export const persistStack = (msgEl, stack) => {
   else msg.setFlag('draw-steel-combat-tools', 'fmModifiers', stackData);
 };
 
+const _buildModTooltip = (entry, baseStates) => {
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const lines = entry.modState.map((m, i) => {
+    const base  = baseStates[i];
+    const parts = [];
+    if (m.distanceDelta !== 0)                              parts.push(`Distance ${m.distanceDelta > 0 ? '+' : ''}${m.distanceDelta}`);
+    if (m.movement !== base?.movement)                      parts.push(`→ ${cap(m.movement)}`);
+    if (m.vertical && !base?.vertical)                      parts.push('Vertical');
+    if (m.verticalDistance !== '' && m.verticalDistance !== base?.verticalDistance) parts.push(`Vert. dist. ${m.verticalDistance}`);
+    if (m.fallReduction !== (base?.fallReduction ?? 0))     parts.push(`Fall reduction: ${m.fallReduction}`);
+    if (m.noFallDamage)                                     parts.push('No fall damage');
+    if (m.noCollisionDamage)                                parts.push('No collision damage');
+    if (m.noMoverCollisionDamage)                           parts.push('No mover damage');
+    if (m.noObstacleCollisionDamage)                        parts.push('No obstacle damage');
+    if (m.ignoreStability)                                  parts.push('Ignore stability');
+    if (m.fastMove)                                         parts.push('Fast path');
+    return parts.join(', ');
+  }).filter(Boolean);
+  const summary = lines.join('\n');
+  const hint    = game.i18n.localize('DSCT.panel.modFm.modifierTitle');
+  return summary ? `${summary}\n${'_'.repeat(24)}\n${hint}` : hint;
+};
+
 export const createModifierNoteDiv = (entry, modifierStack, baseStates, states, btnEls, makeLabel, noteParent, msgEl, persistFn = persistStack) => {
   const { noteName, noteDesc } = entry;
   const noteDiv = document.createElement('div');
   noteDiv.className = 'dsct-fm-mod-note';
   noteDiv.dataset.modifierName = noteName;
   noteDiv.textContent = noteDesc ? `${noteName}: ${noteDesc}` : noteName;
-  noteDiv.title = game.i18n.localize('DSCT.panel.modFm.modifierTitle');
+  noteDiv.title = _buildModTooltip(entry, baseStates);
   noteDiv.style.cssText = 'font-size:11px;padding:3px 6px;margin-top:4px;border-radius:3px;cursor:pointer;border:1px dashed rgba(200,80,80,0.4);color:inherit;user-select:none;';
   noteDiv.addEventListener('mouseenter', () => { noteDiv.style.background = 'rgba(180,40,40,0.2)'; noteDiv.style.textDecoration = 'line-through'; });
   noteDiv.addEventListener('mouseleave', () => { noteDiv.style.background = ''; noteDiv.style.textDecoration = ''; });
