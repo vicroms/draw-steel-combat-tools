@@ -824,11 +824,12 @@ async function _injectFmButtons(message, root) {
             grabBtn.type      = 'button';
             grabBtn.className = `${DSTD}-action-button ${DSTD}-stretch-button`;
             grabBtn.dataset.dsctDstdCond = condKey;
-            grabBtn.dataset.tooltip = 'Grabbed';
+            grabBtn.dataset.tooltip = 'Holding Shift bypasses restrictions';
             grabBtn.append(_makeIcon('fa-solid fa-hand-rock'), _makeSpan('Grabbed'));
             grabBtn.addEventListener('click', async (e) => {
               e.stopPropagation(); e.preventDefault();
-              if (getSetting('restrictGrabButtons') && !game.user.isGM) return;
+              const shiftBypass = e.shiftKey;
+              if (!shiftBypass && getSetting('restrictGrabButtons') && !game.user.isGM) return;
               if (!sourceToken) { ui.notifications.warn(game.i18n.localize('DSCT.notice.sys.controlGrabber')); return; }
               let targetToken = null;
               if (tokenUuid) {
@@ -838,13 +839,14 @@ async function _injectFmButtons(message, root) {
                 targetToken = [...game.user.targets].find(t => t.id !== sourceToken?.id) ?? null;
               }
               if (!targetToken) { ui.notifications.warn('DSCT | Target token not found on canvas'); return; }
-              if (!(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
+              const appliedProps = tierData?.properties instanceof Set ? tierData.properties : new Set(tierData?.properties ?? []);
+              if (!shiftBypass && !appliedProps.has('ignore-size') && !(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
                 if (!canForcedMoveTarget(sourceToken.actor, targetToken.actor)) {
                   ui.notifications.warn(game.i18n.format('DSCT.notice.sys.grabTargetTooLarge', { grabber: sourceToken.name, target: targetToken.name }));
                   return;
                 }
               }
-              if (dsid === 'grab') await runGrab(sourceToken, targetToken, { tier, maxGrabs });
+              if (dsid === 'grab') await runGrab(sourceToken, targetToken, { tier, maxGrabs, ignoreSizeCheck: shiftBypass });
               else {
                 await applyGrab(sourceToken, targetToken, { maxGrabs });
                 ChatMessage.create({ content: `<strong>Grab:</strong> ${sourceToken.name} grabs ${targetToken.name}!` });

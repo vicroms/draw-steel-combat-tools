@@ -21,9 +21,12 @@ const SIZE_EDGE_EFFECT = {
   description: '', tint: '#ffffff', transfer: false, statuses: [], sort: 0, flags: {},
 };
 
-export const buildFreeStrikeButton = (actor) => {
+export const buildFreeStrikeButton = (actor, targetTokenId = null) => {
   const item = actor?.items.find(i => i.name.toLowerCase().includes('melee free strike'));
-  if (item) return `<a onclick="ds.helpers.macros.rollItemMacro('${item.uuid}')" style="cursor:pointer;">Melee Free Strike</a>`;
+  if (item) {
+    const targetAttr = targetTokenId ? ` data-target-token-id="${targetTokenId}"` : '';
+    return `<a data-dsct-action="dsct-free-strike" data-item-uuid="${item.uuid}"${targetAttr} style="cursor:pointer;">Melee Free Strike</a>`;
+  }
   const dmg = actor?.system.monster?.freeStrike;
   return dmg !== undefined ? `[[/damage ${dmg}]]{Free Strike (${dmg} damage)}` : `<em>(No Melee Free Strike found)</em>`;
 };
@@ -245,7 +248,7 @@ export const endGrab = async (grabbedTokenId, { silent = false, customMsg = null
   refreshOpenPanel();
 };
 
-export const runGrab = async (grabberToken, targetToken, { forceApply = false, tier = null, maxGrabs = 1 } = {}) => {
+export const runGrab = async (grabberToken, targetToken, { forceApply = false, ignoreSizeCheck = false, tier = null, maxGrabs = 1 } = {}) => {
   if (!grabberToken) { ui.notifications.warn(game.i18n.localize('DSCT.notice.grab.noGrabber')); return; }
   if (!targetToken)  { ui.notifications.warn(game.i18n.localize('DSCT.notice.grab.noTarget')); return; }
   if (grabberToken.id === targetToken.id) { ui.notifications.warn(game.i18n.localize('DSCT.notice.grab.selfGrab')); return; }
@@ -253,7 +256,7 @@ export const runGrab = async (grabberToken, targetToken, { forceApply = false, t
   const grabberActor = grabberToken.actor;
   const targetActor  = targetToken.actor;
 
-  if (!forceApply && !(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
+  if (!forceApply && !ignoreSizeCheck && !(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
     if (!canForcedMoveTarget(grabberActor, targetActor)) {
       ui.notifications.warn(game.i18n.format('DSCT.notice.grab.tooLarge', { grabber: grabberToken.name, target: targetToken.name }));
       return;
@@ -275,7 +278,7 @@ export const runGrab = async (grabberToken, targetToken, { forceApply = false, t
       const createdMsg = await ChatMessage.create({
         content: `<strong>Grab - Tier 2:</strong> ${grabberToken.name} gets hold of ${targetToken.name}!<br>
           ${targetToken.name} may make a free strike:<br>
-          <div style="margin: 4px 0;">${buildFreeStrikeButton(targetActor)}</div>`,
+          <div style="margin: 4px 0;">${buildFreeStrikeButton(targetActor, grabberToken.id)}</div>`,
         flags: { [M]: { grabConfirm: { grabberId: grabberToken.id, targetId: targetToken.id, maxGrabs } } },
       });
 
@@ -482,7 +485,7 @@ export class GrabPanel extends ds.applications.api.DSApplication {
       const { grabberToken, targetToken } = this._pendingConfirm;
       html += `<div class="dsct-grab-pending">
         <div class="dsct-grab-pending-label">Pending: ${grabberToken.name} grabs ${targetToken.name}</div>
-        <div class="dsct-grab-free-strike">${buildFreeStrikeButton(targetToken.actor)}</div>
+        <div class="dsct-grab-free-strike">${buildFreeStrikeButton(targetToken.actor, grabberToken.id)}</div>
         <div class="dsct-flex-row">
           <button type="button" data-confirm-grab="1" class="dsct-grab-action-btn accent">Confirm</button>
           <button type="button" data-cancel-grab="1"  class="dsct-grab-action-btn danger">Cancel</button>
@@ -517,7 +520,7 @@ export class GrabPanel extends ds.applications.api.DSApplication {
         </div>
         ${isPending ? `<div class="dsct-escape-tier2">
           Tier 2: ${grab.grabbedName} can escape, but ${grab.grabberName} gets a free strike first.<br>
-          ${buildFreeStrikeButton(grabberTok?.actor)}
+          ${buildFreeStrikeButton(grabberTok?.actor, grab.grabbedTokenId)}
           <div class="dsct-flex-row" style="margin-top:4px;">
             <button type="button" data-escapetier2accept="${grab.grabbedTokenId}" class="dsct-grab-action-btn accent">Accept escape</button>
             <button type="button" data-escapetier2deny="${grab.grabbedTokenId}"   class="dsct-grab-action-btn danger">Stay grabbed</button>
@@ -619,6 +622,17 @@ export class GrabPanel extends ds.applications.api.DSApplication {
         this._pendingConfirm = null;
         this._refreshPanel();
         if (pc) await resolveGrabConfirmChatMessage(pc.msgId, 'cancelled');
+        return;
+      }
+
+      const freeStrikeEl = e.target.closest('[data-dsct-action="dsct-free-strike"]');
+      if (freeStrikeEl) {
+        const targetTokId = freeStrikeEl.dataset.targetTokenId;
+        if (targetTokId) {
+          const tok = getTokenById(targetTokId);
+          if (tok) tok.setTarget(true, { user: game.user, releaseOthers: true });
+        }
+        await ds.helpers.macros.rollItemMacro(freeStrikeEl.dataset.itemUuid);
         return;
       }
     });

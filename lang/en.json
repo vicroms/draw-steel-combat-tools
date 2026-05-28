@@ -409,7 +409,8 @@
     "FM": {
       "Property": {
         "NoCollisionDamage": "No Collision Damage",
-        "FastAutoPath": "Fast Auto-Path"
+        "FastAutoPath": "Fast Auto-Path",
+        "IgnoreSize": "Ignore Size"
       }
     },
     "panel": {

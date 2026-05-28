@@ -54,6 +54,8 @@ const getRollCharacteristics = (el) => {
   return (rollLine + ' ' + flavorTxt).toLowerCase();
 };
 
+
+
 function _setBaneDialogLock(app, locked, reasons = []) {
   if (!app.element) return;
   if (getSetting('rollDialogPillUI')) {
@@ -335,6 +337,7 @@ export function registerChatHooks() {
       }
     }
 
+
   };
 
   registerAbilityInjectors();
@@ -546,7 +549,7 @@ export function registerChatHooks() {
           const grabberTok = getTokenById(grab.grabberTokenId);
           container.innerHTML = `
             ${game.i18n.format('DSCT.chat.grab.freeStrikePrompt', { grabber: grab.grabberName })}<br>
-            <div style="margin:4px 0;">${grabberTok ? buildFreeStrikeButton(grabberTok.actor) : ''}</div>
+            <div style="margin:4px 0;">${grabberTok ? buildFreeStrikeButton(grabberTok.actor, grab.grabbedTokenId) : ''}</div>
             <div style="display:flex;gap:4px;margin-top:4px;">
               <button type="button" class="apply-effect dsct-accept-escape"><i class="fa-solid fa-check"></i> ${game.i18n.localize('DSCT.button.acceptEscape')}</button>
               <button type="button" class="apply-effect dsct-deny-escape"><i class="fa-solid fa-times"></i> ${game.i18n.localize('DSCT.button.stayGrabbed')}</button>
@@ -684,6 +687,18 @@ export function registerChatHooks() {
         if (msg.isOwner || game.user.isGM) await msg.delete();
       });
       btnArea().appendChild(btn);
+    }
+
+    for (const btn of el.querySelectorAll('[data-dsct-action="dsct-free-strike"]')) {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const targetTokId = btn.dataset.targetTokenId;
+        if (targetTokId) {
+          const tok = getTokenById(targetTokId);
+          if (tok) tok.setTarget(true, { user: game.user, releaseOthers: true });
+        }
+        await ds.helpers.macros.rollItemMacro(btn.dataset.itemUuid);
+      });
     }
   });
 

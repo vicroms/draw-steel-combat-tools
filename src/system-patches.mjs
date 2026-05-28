@@ -50,10 +50,15 @@ export function registerSystemPatches() {
 }
 
 function _extendFMProperties() {
-  const props = ds?.CONFIG?.PowerRollEffect?.forced?.properties;
-  if (!props) return;
-  props['no-collision-damage'] = { label: 'DSCT.FM.Property.NoCollisionDamage' };
-  props['fast-auto-path']      = { label: 'DSCT.FM.Property.FastAutoPath' };
+  const forcedProps = ds?.CONFIG?.PowerRollEffect?.forced?.properties;
+  if (forcedProps) {
+    forcedProps['no-collision-damage'] = { label: 'DSCT.FM.Property.NoCollisionDamage' };
+    forcedProps['fast-auto-path']      = { label: 'DSCT.FM.Property.FastAutoPath' };
+  }
+  const appliedProps = ds?.CONFIG?.PowerRollEffect?.applied?.properties;
+  if (appliedProps) {
+    appliedProps['ignore-size'] = { label: 'DSCT.FM.Property.IgnoreSize' };
+  }
 }
 
 function _patchFMConstructButtons() {
@@ -120,16 +125,18 @@ function _patchAppliedConstructButtons() {
     M,
     'ds.data.pseudoDocuments.powerRollEffects.AppliedPowerRollEffect.prototype.constructButtons',
     function(wrapped, tier) {
-      const original = wrapped(tier) ?? [];
-      const tierKey  = `tier${tier}`;
-      const item     = this.item;
+      const original  = wrapped(tier) ?? [];
+      const tierKey   = `tier${tier}`;
+      const item      = this.item;
+      const tierData  = this.applied?.[tierKey];
+      const tierProps = tierData?.properties instanceof Set ? tierData.properties : new Set(tierData?.properties ?? []);
 
       
       return original.map(btn => {
         const effectId = btn.dataset?.effectId ?? btn.dataset?.effectid;
 
         if (effectId === 'grabbed' && getSetting('grabEnabled')) {
-          return _buildGrabButton(btn, item, tier);
+          return _buildGrabButton(btn, item, tier, tierProps);
         }
         if (effectId === 'frightened' && getSetting('frightenedEnabled')) {
           return _buildConditionButton(btn, this, tierKey, item, 'frightened');
@@ -144,7 +151,7 @@ function _patchAppliedConstructButtons() {
   );
 }
 
-function _buildGrabButton(original, item, tier) {
+function _buildGrabButton(original, item, tier, properties = new Set()) {
   const dsid     = getItemDsid(item);
   const maxGrabs = MULTI_GRAB_LIMITS[dsid] ?? 1;
 
@@ -157,6 +164,8 @@ function _buildGrabButton(original, item, tier) {
   btn.dataset.dsctDsid   = dsid ?? '';
   btn.dataset.dsctTier   = String(tier ?? 0);
   btn.dataset.maxGrabs   = String(maxGrabs);
+  btn.dataset.properties = JSON.stringify([...properties]);
+  btn.dataset.tooltip    = 'Holding Shift bypasses restrictions';
   return btn;
 }
 
@@ -441,7 +450,8 @@ function _registerButtonHooks() {
         e.preventDefault();
         e.stopPropagation();
 
-        if (getSetting('restrictGrabButtons') && !game.user.isGM) return;
+        const shiftBypass = e.shiftKey;
+        if (!shiftBypass && getSetting('restrictGrabButtons') && !game.user.isGM) return;
 
         const controlled = canvas.tokens.controlled;
         const grabber    = controlled.length === 1 ? controlled[0] : null;
@@ -451,7 +461,8 @@ function _registerButtonHooks() {
         if (!targets.length) { ui.notifications.warn(game.i18n.format('DSCT.notice.sys.grabApplyTarget', { s: maxGrabs > 1 ? 's' : '' })); return; }
         if (targets.length > maxGrabs) { ui.notifications.warn(game.i18n.format('DSCT.notice.sys.grabTooManyTargets', { max: maxGrabs, s: maxGrabs !== 1 ? 's' : '' })); return; }
 
-        if (!(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
+        const grabProps = new Set(JSON.parse(btn.dataset.properties ?? '[]'));
+        if (!shiftBypass && !grabProps.has('ignore-size') && !(game.user.isGM && getSetting('gmBypassesSizeCheck'))) {
           for (const t of targets) {
             if (!canForcedMoveTarget(grabber.actor, t.actor)) {
               ui.notifications.warn(game.i18n.format('DSCT.notice.sys.grabTargetTooLarge', { grabber: grabber.name, target: t.name }));
@@ -463,7 +474,7 @@ function _registerButtonHooks() {
         if (dsid === 'grab') {
           
           for (const t of targets) {
-            await runGrab(grabber, t, { tier, maxGrabs });
+            await runGrab(grabber, t, { tier, maxGrabs, ignoreSizeCheck: shiftBypass });
           }
         } else {
           for (const t of targets) {
