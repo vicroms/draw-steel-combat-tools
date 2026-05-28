@@ -3,7 +3,9 @@ import { getSetting } from '../helpers.mjs';
 const M = 'draw-steel-combat-tools';
 const DBG = () => getSetting('debugMode');
 
+
 const _deathGrace = new Set();
+
 
 let _raisedDeadVisible = false;
 const _previewTokenIds = new Set();

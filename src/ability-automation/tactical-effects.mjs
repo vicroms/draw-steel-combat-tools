@@ -13,6 +13,7 @@ const AID_ATTACK_EFFECT = {
   description: '', tint: '#ffffff', transfer: false, statuses: [], sort: 0, flags: { [M]: { effectType: 'aid-attack' } },
 };
 
+
 const removeExistingJudgement = async () => {
   const existing = game.actors.contents
     .flatMap(a => [...a.effects])
@@ -98,6 +99,8 @@ export const applyMark = async ({ maxTargets = 1, override = false, dsid = 'othe
   await ChatMessage.create({ content: game.i18n.format('DSCT.chat.tactical.marked', { names, verb: targets.length > 1 ? 'are' : 'is' }) });
 };
 
+
+
 const recentlyProcessed = new Set();
 const shouldTrigger = (key) => {
   if (recentlyProcessed.has(key)) return false;
@@ -105,6 +108,7 @@ const shouldTrigger = (key) => {
   setTimeout(() => recentlyProcessed.delete(key), 2000);
   return true;
 };
+
 
 export const flagJudgementTriggersUsed = async (judgedActorId) => {
   const api = getModuleApi(false);

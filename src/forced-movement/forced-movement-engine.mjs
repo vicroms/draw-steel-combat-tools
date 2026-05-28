@@ -26,7 +26,9 @@ import { toggleForcedMovementPanel } from './forced-movement-panel.mjs';
 import { VerticalDistancePopup } from './forced-movement-vertical-popup.mjs';
 import { runMultiTokenPicker, setFoundryTargets } from '../ability-automation/target-picker.mjs';
 
-const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonusCreatureDmg = 0, bonusObjectDmg = 0, verticalHeight = 0, fallReduction = 0, noFallDamage = false, ignoreStability = false, noCollisionDamage = false, keywords = [], fastMove = false, suppressMessage = false, juggernaut = false) => {
+const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonusCreatureDmg = 0, bonusObjectDmg = 0, verticalHeight = 0, fallReduction = 0, noFallDamage = false, ignoreStability = false, noCollisionDamage = false, keywords = [], fastMove = false, suppressMessage = false, juggernaut = false, noMoverCollisionDamage = false, noObstacleCollisionDamage = false) => {
+  const noMoverDmg    = noCollisionDamage || noMoverCollisionDamage;
+  const noObstacleDmg = noCollisionDamage || noObstacleCollisionDamage;
   const grabState = window._activeGrabs?.get(targetToken.id);
   if (grabState) {
     const sourceIsGrabber = sourceToken && sourceToken.id === grabState.grabberTokenId;
@@ -105,7 +107,9 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
     if (bonusObjectDmg)     parts.push(`+${bonusObjectDmg} object collision`);
     if (fallReduction)      parts.push(`+${fallReduction} fall reduction`);
     if (noFallDamage)       parts.push('no fall damage');
-    if (noCollisionDamage)  parts.push('no collision damage');
+    if (noCollisionDamage)          parts.push('no collision damage');
+    if (noMoverCollisionDamage)     parts.push('no mover collision damage');
+    if (noObstacleCollisionDamage)   parts.push('no obstacle collision damage');
     if (ignoreStability)    parts.push('ignores stability');
     if (juggernaut)         parts.push('juggernaut mode');
     const summaryPrefix = juggernaut ? '<strong>UNSTOPPABLE.</strong> ' : '';
@@ -123,11 +127,12 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
   
   const cornerCutMode = getSetting('cornerCutMode');
 
-  const ncdNote  = noCollisionDamage ? ' (No Collision Damage)' : '';
+  const ncdNote  = (noMoverDmg && noObstacleDmg) ? ' (No Collision Damage)' : noMoverDmg ? ' (No Mover Damage)' : noObstacleDmg ? ' (No Obstacle Damage)' : '';
   let moverIsDefeated    = false;
   let friendlyFireNote   = null;
-  const dmgStr      = (n) => `${noCollisionDamage ? 'would take' : 'takes'} <strong>${n} damage</strong>${ncdNote}`;
-  const TakesStr    = (n) => `${noCollisionDamage ? 'Would take' : 'Takes'} <strong>${n} damage</strong>${ncdNote}`;
+  const dmgStr        = (n) => `${noMoverDmg  ? 'would take' : 'takes'} <strong>${n} damage</strong>${ncdNote}`;
+  const TakesStr      = (n) => `${noMoverDmg  ? 'Would take' : 'Takes'} <strong>${n} damage</strong>${ncdNote}`;
+  const blockerDmgStr = (n) => `${noObstacleDmg ? 'would take' : 'takes'} <strong>${n} damage</strong>`;
   const moverAndTakes  = (n) => moverIsDefeated ? '' : ` and ${dmgStr(n)}`;
   const moverDealsNote = (n) => moverIsDefeated ? '' : `, deals <strong>${n} damage</strong>`;
 
@@ -1491,7 +1496,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
           const tileTop    = walls[0]?.flags?.['wall-height']?.top    ?? Infinity;
           if (stepElev >= tileBottom && stepElev < tileTop) {
             const dmg = 2 + remaining + bonusObjectDmg;
-            if (!noCollisionDamage && !targetIsDead) await applyDamage(targetToken.actor, dmg);
+            if (!noMoverDmg && !targetIsDead) await applyDamage(targetToken.actor, dmg);
             collisionMsgs.push(`${targetToken.name} is blocked by a wall and ${dmgStr(dmg)}.`);
             if (dir === -1) {
               const ffd = Math.abs(reducedVert);
@@ -1514,13 +1519,16 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         const blockerIsDead = isTokenDead(blocker);
         if (blocker && (!blockerIsDead || getSetting('corpsesBlock')) && (blocker.document.elevation ?? 0) === stepElev) {
           if (blockerIsDead) {
-            if (!noCollisionDamage && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
-            collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into the corpse of ${blocker.name}${noCollisionDamage || targetIsDead ? '.' : `. ${TakesStr(remaining + bonusCreatureDmg)}.`}`);
+            if (!noMoverDmg && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
+            collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into the corpse of ${blocker.name}${noMoverDmg || targetIsDead ? '.' : `. ${TakesStr(remaining + bonusCreatureDmg)}.`}`);
           } else {
             undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
-            if (!noCollisionDamage && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
-            if (!noCollisionDamage) await applyDamage(blocker.actor, remaining + bonusCreatureDmg);
-            collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} hits ${blocker.name}. ${noCollisionDamage ? 'Would both take' : 'Both take'} <strong>${remaining + bonusCreatureDmg} damage</strong>${ncdNote}.`);
+            if (!noMoverDmg && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
+            if (!noObstacleDmg) await applyDamage(blocker.actor, remaining + bonusCreatureDmg);
+            const _vDmg  = remaining + bonusCreatureDmg;
+            const _vSame = noMoverDmg === noObstacleDmg;
+            const _vMsg  = _vSame ? `${noMoverDmg ? 'Would both take' : 'Both take'} <strong>${_vDmg} damage</strong>${ncdNote}` : `${targetToken.name} ${dmgStr(_vDmg)}; ${blocker.name} ${blockerDmgStr(_vDmg)}`;
+            collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} hits ${blocker.name}. ${_vMsg}.`);
           }
           blocked = true;
           break;
@@ -1603,11 +1611,11 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
     let case1Fired = false;
     const sameDisp = (a, b) => { const da = a?.document?.disposition; const db = b?.document?.disposition; return da != null && da === db; };
     const dmgTarget = async (dmg) => {
-      if (!noCollisionDamage && !targetIsDead && !moverIsDefeated && dmg > 0) { await applyDamage(targetToken.actor, dmg); totalTargetDmg += dmg; }
+      if (!noMoverDmg && !targetIsDead && !moverIsDefeated && dmg > 0) { await applyDamage(targetToken.actor, dmg); totalTargetDmg += dmg; }
     };
 
     const moverWouldStop = (dmg) => {
-      if (noCollisionDamage || targetIsDead || moverIsDefeated) return false;
+      if (noMoverDmg || targetIsDead || moverIsDefeated) return false;
       const indivMax = targetToken.actor.system.stamina.max ?? Infinity;
       if (dmg >= indivMax) return true;
       return targetToken.actor.system.stamina.value <= 0;
@@ -1844,7 +1852,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             for (const obj of objectBlockers) {
               window._dsctRubblePlaced.add(obj.id);
               setTimeout(() => window._dsctRubblePlaced?.delete(obj.id), 5000);
-              const objPrev = noCollisionDamage ? null : await applyDamage(obj.actor, dealDmg);
+              const objPrev = noObstacleDmg ? null : await applyDamage(obj.actor, dealDmg);
               if (objPrev) undoOps.push({ op: 'stamina', uuid: obj.actor.uuid, prevValue: objPrev.prevValue, prevTemp: objPrev.prevTemp, squadGroupUuid: null, prevSquadHP: null, squadCombatantIds: [], squadTokenIds: [] });
             }
             const moverDmg = maxObjCost + 2;
@@ -1859,12 +1867,12 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             const brokenObjects = objectBlockers.filter(o => dealDmg >= (o.actor?.system?.stamina?.value ?? 0));
             const survivingObjects = objectBlockers.filter(o => !brokenObjects.includes(o));
             for (const obj of brokenObjects) {
-              const objPrev = noCollisionDamage ? null : await applyDamage(obj.actor, dealDmg);
+              const objPrev = noObstacleDmg ? null : await applyDamage(obj.actor, dealDmg);
               if (objPrev) undoOps.push({ op: 'stamina', uuid: obj.actor.uuid, prevValue: objPrev.prevValue, prevTemp: objPrev.prevTemp, squadGroupUuid: null, prevSquadHP: null, squadCombatantIds: [], squadTokenIds: [] });
               await destroyObjectToken(obj, undoOps);
             }
             for (const obj of survivingObjects) {
-              const objPrev = noCollisionDamage ? null : await applyDamage(obj.actor, dealDmg);
+              const objPrev = noObstacleDmg ? null : await applyDamage(obj.actor, dealDmg);
               if (objPrev) undoOps.push({ op: 'stamina', uuid: obj.actor.uuid, prevValue: objPrev.prevValue, prevTemp: objPrev.prevTemp, squadGroupUuid: null, prevSquadHP: null, squadCombatantIds: [], squadTokenIds: [] });
             }
             landingIndex = i - 1;
@@ -1888,12 +1896,14 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         }
 
         if (creatureBlockers.length > 0) {
-          if (!juggernaut && sourceToken && !noCollisionDamage && getSetting('friendlyFireConfirmation')) {
+          if (!juggernaut && sourceToken && getSetting('friendlyFireConfirmation')) {
             if (!case1Fired && sameDisp(sourceToken, targetToken)) {
               case1Fired = true;
-              const stop = await confirmFriendlyFireCase1(sourceToken, targetToken);
-              if (stop) { landingIndex = i - 1; friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
-            } else {
+              if (!noMoverDmg) {
+                const stop = await confirmFriendlyFireCase1(sourceToken, targetToken);
+                if (stop) { landingIndex = i - 1; friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
+              }
+            } else if (!noObstacleDmg) {
               const allyBlockers = creatureBlockers.filter(b => sameDisp(sourceToken, b));
               if (allyBlockers.length > 0) {
                 const action = await confirmFriendlyFireCase2(sourceToken, targetToken, allyBlockers, remaining + bonusCreatureDmg);
@@ -1920,13 +1930,13 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             const prevSharedHP = sharedGroup?.system?.staminaValue ?? null;
             const blockerDmg  = (juggernaut && blocker.actor.system.isMinion) ? (blocker.actor.system.stamina.max ?? 99999) : dmg;
             
-            if (sharedGroup && !(noCollisionDamage && !juggernaut)) {
+            if (sharedGroup && !(noObstacleDmg && !juggernaut)) {
               if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
               window._lastSquadDamagedTokenIds.add(blocker.id);
               clearTimeout(window._lastSquadDamagedTokenIdsTimer);
               window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 10000);
             }
-            const blockerPrev = (noCollisionDamage && !juggernaut) ? null : await applyDamage(blocker.actor, blockerDmg, sharedGroup ? null : blockerSquadGroup);
+            const blockerPrev = (noObstacleDmg && !juggernaut) ? null : await applyDamage(blocker.actor, blockerDmg, sharedGroup ? null : blockerSquadGroup);
             if (blockerPrev && sharedGroup && prevSharedHP !== null) {
               const sharedMembers = Array.from(sharedGroup.members || []).filter(m => m);
               blockerPrev.squadGroup        = sharedGroup;
@@ -1954,7 +1964,8 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             collisionMsgs.push(`<strong>Unstoppable!</strong> ${targetToken.name} obliterates ${blockerNames} and keeps going.`);
             continue;
           }
-          collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into ${blockerNames} with ${remaining} square${remaining !== 1 ? 's' : ''} remaining. ${noCollisionDamage ? 'Would all take' : 'All take'} <strong>${dmg} damage</strong>${bonusNote}${ncdNote}.`);
+          const _ltPhrase = (noMoverDmg === noObstacleDmg) ? (noMoverDmg ? 'Would all take' : 'All take') : noMoverDmg ? `Obstacles take, ${targetToken.name} would take` : `${targetToken.name} takes, obstacles would take`;
+          collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into ${blockerNames} with ${remaining} square${remaining !== 1 ? 's' : ''} remaining. ${_ltPhrase} <strong>${dmg} damage</strong>${bonusNote}${ncdNote}.`);
           break;
         }
 
@@ -2113,13 +2124,13 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         if (isTokenDead(blocker)) {
           landingIndex = i - 1;
           const stopDmg = remaining + bonusCreatureDmg;
-          if (!moverIsDefeated && !noCollisionDamage) await dmgTarget(stopDmg);
-          collisionMsgs.push(`${targetToken.name} is stopped by the corpse of ${blocker.name}${moverIsDefeated || noCollisionDamage ? '.' : `. ${TakesStr(stopDmg)}.`}`);
+          if (!moverIsDefeated && !noMoverDmg) await dmgTarget(stopDmg);
+          collisionMsgs.push(`${targetToken.name} is stopped by the corpse of ${blocker.name}${moverIsDefeated || noMoverDmg ? '.' : `. ${TakesStr(stopDmg)}.`}`);
           break;
         }
 
         if (blocker.actor?.type === 'object') {
-          if (sourceToken && !noCollisionDamage && !case1Fired && getSetting('friendlyFireConfirmation') && sameDisp(sourceToken, targetToken)) {
+          if (sourceToken && !noMoverDmg && !case1Fired && getSetting('friendlyFireConfirmation') && sameDisp(sourceToken, targetToken)) {
             case1Fired = true;
             const stop = await confirmFriendlyFireCase1(sourceToken, targetToken);
             if (stop) { landingIndex = i - 1; friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
@@ -2134,7 +2145,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             window._dsctRubblePlaced.add(blocker.id);
             setTimeout(() => window._dsctRubblePlaced?.delete(blocker.id), 5000);
           }
-          const objPrev = noCollisionDamage ? null : await applyDamage(blocker.actor, dealDmg);
+          const objPrev = noObstacleDmg ? null : await applyDamage(blocker.actor, dealDmg);
           if (objPrev) undoOps.push({ op: 'stamina', uuid: blocker.actor.uuid, prevValue: objPrev.prevValue, prevTemp: objPrev.prevTemp, squadGroupUuid: null, prevSquadHP: null, squadCombatantIds: [], squadTokenIds: [] });
           await dmgTarget(moverDmg);
 
@@ -2156,12 +2167,14 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         const savedLandingIndex = landingIndex;
         if (!juggernaut) landingIndex = i - 1;
 
-        if (sourceToken && !noCollisionDamage && !juggernaut && getSetting('friendlyFireConfirmation')) {
+        if (sourceToken && !juggernaut && getSetting('friendlyFireConfirmation')) {
           if (!case1Fired && sameDisp(sourceToken, targetToken)) {
             case1Fired = true;
-            const stop = await confirmFriendlyFireCase1(sourceToken, targetToken);
-            if (stop) { friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
-          } else if (sameDisp(sourceToken, blocker)) {
+            if (!noMoverDmg) {
+              const stop = await confirmFriendlyFireCase1(sourceToken, targetToken);
+              if (stop) { friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
+            }
+          } else if (!noObstacleDmg && sameDisp(sourceToken, blocker)) {
             const action = await confirmFriendlyFireCase2(sourceToken, targetToken, [blocker], remaining + bonusCreatureDmg);
             if (action === 'cancel') { friendlyFireNote = `Friendly fire reduced ${type} ${reduced} to ${i}.`; break; }
             if (action === 'ignore') { landingIndex = savedLandingIndex; continue; }
@@ -2178,13 +2191,13 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         const creatureDmg = juggernaut ? ((blocker.actor.system.isMinion) ? (blocker.actor.system.stamina.max ?? 99999) : 99999) : remaining + bonusCreatureDmg;
         await dmgTarget(juggernaut ? 0 : creatureDmg);
         
-        if (sharedGroup && !(noCollisionDamage && !juggernaut)) {
+        if (sharedGroup && !(noObstacleDmg && !juggernaut)) {
           if (!window._lastSquadDamagedTokenIds) window._lastSquadDamagedTokenIds = new Set();
           window._lastSquadDamagedTokenIds.add(blocker.id);
           clearTimeout(window._lastSquadDamagedTokenIdsTimer);
           window._lastSquadDamagedTokenIdsTimer = setTimeout(() => { window._lastSquadDamagedTokenIds = null; }, 10000);
         }
-        const blockerPrev = (noCollisionDamage && !juggernaut) ? null : await applyDamage(blocker.actor, creatureDmg, sharedGroup ? null : blockerSquadGroup);
+        const blockerPrev = (noObstacleDmg && !juggernaut) ? null : await applyDamage(blocker.actor, creatureDmg, sharedGroup ? null : blockerSquadGroup);
 
         if (blockerPrev && sharedGroup && prevSharedHP !== null) {
           const sharedMembers = Array.from(sharedGroup.members || []).filter(m => m);
@@ -2203,7 +2216,11 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
           collisionMsgs.push(`<strong>Unstoppable!</strong> ${targetToken.name} obliterates ${blocker.name} and keeps going.`);
           continue;
         }
-        collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into ${blocker.name} with ${remaining} square${remaining !== 1 ? 's' : ''} remaining. ${noCollisionDamage ? 'Would both take' : 'Both take'} <strong>${dmgTotal} damage</strong>${bonusNote}${ncdNote}.`);
+        const _hcSame = noMoverDmg === noObstacleDmg;
+        const _hcMsg  = _hcSame
+          ? `${noMoverDmg ? 'Would both take' : 'Both take'} <strong>${dmgTotal} damage</strong>${bonusNote}${ncdNote}`
+          : `${targetToken.name} ${dmgStr(dmgTotal)}; ${blocker.name} ${blockerDmgStr(dmgTotal)}${bonusNote}`;
+        collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into ${blocker.name} with ${remaining} square${remaining !== 1 ? 's' : ''} remaining. ${_hcMsg}.`);
         break;
       }
 
@@ -2588,8 +2605,10 @@ export async function runForcedMovement(macroArgs = []) {
     const distance = parseInt(distRaw) || 0;
     const propSet  = properties instanceof Set ? properties : new Set(properties ?? []);
 
-    const noCollisionDamage = propSet.has('no-collision-damage');
-    const ignoreStability   = propSet.has('ignore-stability');
+    const noCollisionDamage        = propSet.has('no-collision-damage');
+    const noMoverCollisionDamage   = propSet.has('no-mover-collision-damage');
+    const noObstacleCollisionDamage = propSet.has('no-obstacle-collision-damage');
+    const ignoreStability          = propSet.has('ignore-stability');
     const fastMove          = propSet.has('fast-auto-path');
 
     if (!type)           { ui.notifications.warn(game.i18n.localize('DSCT.notice.fm.invalidMovementType')); return; }
@@ -2617,12 +2636,12 @@ export async function runForcedMovement(macroArgs = []) {
     if (type === 'Pull' && verticalHeight > 0) verticalHeight = -verticalHeight;
 
     if (targetsToProcess.length === 1) {
-      await _runForcedMovement(type, distance, targetsToProcess[0], source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove);
+      await _runForcedMovement(type, distance, targetsToProcess[0], source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove, false, false, noMoverCollisionDamage, noObstacleCollisionDamage);
     } else {
       const results = [];
       if (fastMove) {
         for (const t of targetsToProcess) {
-          const result = await _runForcedMovement(type, distance, t, source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove, true);
+          const result = await _runForcedMovement(type, distance, t, source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove, true, false, noMoverCollisionDamage, noObstacleCollisionDamage);
           if (result) results.push(result);
         }
       } else {
@@ -2631,7 +2650,7 @@ export async function runForcedMovement(macroArgs = []) {
           const picked = await pickTarget(remaining);
           if (!picked) break;
           remaining = remaining.filter(t => t.id !== picked.id);
-          const result = await _runForcedMovement(type, distance, picked, source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove, true);
+          const result = await _runForcedMovement(type, distance, picked, source, 0, 0, verticalHeight, fallReduction, false, ignoreStability, noCollisionDamage, [], fastMove, true, false, noMoverCollisionDamage, noObstacleCollisionDamage);
           if (result) results.push(result);
         }
       }
@@ -2652,11 +2671,11 @@ export async function runForcedMovement(macroArgs = []) {
     }
   }
   else if (typeof macroArgs === 'object' && !Array.isArray(macroArgs) && Object.keys(macroArgs).length > 0) {
-    const { type, distance, sourceId, targetId, verticalHeight, fallReduction, noFallDamage, noCollisionDamage, ignoreStability, fastMove, suppressMessage, juggernaut } = macroArgs;
+    const { type, distance, sourceId, targetId, verticalHeight, fallReduction, noFallDamage, noCollisionDamage, noMoverCollisionDamage = false, noObstacleCollisionDamage = false, ignoreStability, fastMove, suppressMessage, juggernaut } = macroArgs;
     const target = getTokenById(targetId);
     const source = sourceId ? getTokenById(sourceId) : null;
     if (!target) { ui.notifications.warn(game.i18n.localize('DSCT.notice.fm.targetNotFound')); return; }
-    return await _runForcedMovement(type, distance, target, source, 0, 0, verticalHeight, fallReduction, noFallDamage, ignoreStability, noCollisionDamage, [], fastMove, suppressMessage, juggernaut);
+    return await _runForcedMovement(type, distance, target, source, 0, 0, verticalHeight, fallReduction, noFallDamage, ignoreStability, noCollisionDamage, [], fastMove, suppressMessage, juggernaut, noMoverCollisionDamage, noObstacleCollisionDamage);
   }
   else {
     toggleForcedMovementPanel();

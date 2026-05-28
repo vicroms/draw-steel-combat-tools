@@ -104,15 +104,13 @@ export class ForcedMovementPanel extends ds.applications.api.DSApplication {
 
     const juggerEl  = this.element.querySelector('#fm-juggernaut');
     const noFallEl  = this.element.querySelector('#fm-no-fall');
-    const noColEl   = this.element.querySelector('#fm-no-col');
+    const colDmgEl  = this.element.querySelector('#fm-col-dmg');
     const ignStabEl = this.element.querySelector('#fm-ign-stab');
     const applyJuggernautLock = () => {
       const on = juggerEl?.checked;
-      for (const el of [noFallEl, noColEl, ignStabEl]) {
-        if (!el) continue;
-        el.checked  = on ? true : el.checked;
-        el.disabled = !!on;
-      }
+      if (noFallEl)  { noFallEl.checked  = on ? true : noFallEl.checked;  noFallEl.disabled  = !!on; }
+      if (ignStabEl) { ignStabEl.checked = on ? true : ignStabEl.checked; ignStabEl.disabled = !!on; }
+      if (colDmgEl)  { if (on) colDmgEl.value = 'none'; colDmgEl.disabled = !!on; }
     };
     juggerEl?.addEventListener('change', applyJuggernautLock);
     applyJuggernautLock();
@@ -156,14 +154,17 @@ export class ForcedMovementPanel extends ds.applications.api.DSApplication {
     const fallReduction     = parseInt(this.element.querySelector('#fm-fall-red')?.value) || 0;
     const juggernaut        = this.element.querySelector('#fm-juggernaut')?.checked ?? false;
     const noFallDamage      = juggernaut || this.element.querySelector('#fm-no-fall')?.checked;
-    const noCollisionDamage = juggernaut || this.element.querySelector('#fm-no-col')?.checked;
-    const ignoreStability   = juggernaut || this.element.querySelector('#fm-ign-stab')?.checked;
+    const colDmgVal         = this.element.querySelector('#fm-col-dmg')?.value ?? 'all';
+    const noCollisionDamage        = juggernaut || colDmgVal === 'none';
+    const noMoverCollisionDamage   = juggernaut || colDmgVal === 'no-mover';
+    const noObstacleCollisionDamage = juggernaut || colDmgVal === 'no-obstacle';
+    const ignoreStability          = juggernaut || this.element.querySelector('#fm-ign-stab')?.checked;
     const fastMove          = this.element.querySelector('#fm-fast-move')?.checked;
 
     const api = getModuleApi(false);
     if (api && api.forcedMovement) {
       const targetsToProcess = this._targetTokens.slice(0, 25);
-      const payload = { type, distance, sourceId: this._sourceToken?.id, verticalHeight, fallReduction, noFallDamage, noCollisionDamage, ignoreStability, fastMove, juggernaut };
+      const payload = { type, distance, sourceId: this._sourceToken?.id, verticalHeight, fallReduction, noFallDamage, noCollisionDamage, noMoverCollisionDamage, noObstacleCollisionDamage, ignoreStability, fastMove, juggernaut };
 
       if (targetsToProcess.length === 1) {
         await api.forcedMovement({ ...payload, targetId: targetsToProcess[0].id });

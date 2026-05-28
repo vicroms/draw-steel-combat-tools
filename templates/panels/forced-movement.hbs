@@ -44,9 +44,18 @@
       <input type="number" id="fm-fall-red" value="0" min="0" step="1" class="dsct-input-sm" title="Bonus (Stacks with Agility)">
     </div>
 
+    <div class="dsct-row">
+      <div class="dsct-param-label">{{localize "DSCT.panel.fm.collisionDamage"}}</div>
+      <select id="fm-col-dmg" style="width:175px;">
+        <option value="all">{{localize "DSCT.panel.fm.colAll"}}</option>
+        <option value="no-mover">{{localize "DSCT.panel.fm.colNoMover"}}</option>
+        <option value="no-obstacle">{{localize "DSCT.panel.fm.colNoObstacle"}}</option>
+        <option value="none">{{localize "DSCT.panel.fm.colNone"}}</option>
+      </select>
+    </div>
+
     <div class="dsct-checkbox-grid">
       <label class="dsct-checkbox-label"><input type="checkbox" id="fm-no-fall"> {{localize "DSCT.panel.fm.noFallDamage"}}</label>
-      <label class="dsct-checkbox-label"><input type="checkbox" id="fm-no-col"> {{localize "DSCT.panel.fm.noCollisionDamage"}}</label>
       <label class="dsct-checkbox-label"><input type="checkbox" id="fm-ign-stab"> {{localize "DSCT.panel.fm.ignoreStability"}}</label>
       <label class="dsct-checkbox-label"><input type="checkbox" id="fm-fast-move"> {{localize "DSCT.panel.fm.fastAutoPath"}}</label>
     </div>

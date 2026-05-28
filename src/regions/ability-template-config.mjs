@@ -3,6 +3,7 @@ import { getModuleApi, safeDelete } from '../helpers.mjs';
 const M  = 'draw-steel-combat-tools';
 const DS = 'draw-steel';
 
+
 async function _syncTemplateRegionToItem(region) {
   const abilityItemUuid = region.getFlag(M, 'abilityItemUuid');
   if (!abilityItemUuid) return;
@@ -97,6 +98,7 @@ function _injectConfigButton(app, html) {
   wrap.appendChild(btn);
   typeGroup.before(wrap);
 }
+
 
 function _registerPlaceRegionPatch() {
   libWrapper.register(

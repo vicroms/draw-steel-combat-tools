@@ -24,9 +24,11 @@ function _fmBaseStateFromBtn(btn) {
     vertical:          props.has('vertical'),
     verticalDistance:  vd > 0 ? vd : '',
     fallReduction:     Number(btn.dataset.fallReduction ?? 0),
-    noFallDamage:      false,
-    noCollisionDamage: props.has('no-collision-damage'),
-    ignoreStability:   props.has('ignore-stability'),
+    noFallDamage:              false,
+    noCollisionDamage:         props.has('no-collision-damage'),
+    noMoverCollisionDamage:    props.has('no-mover-collision-damage'),
+    noObstacleCollisionDamage:  props.has('no-obstacle-collision-damage'),
+    ignoreStability:           props.has('ignore-stability'),
     fastMove:          props.has('fast-auto-path'),
   };
 }
@@ -52,8 +54,10 @@ export function registerSystemPatches() {
 function _extendFMProperties() {
   const forcedProps = ds?.CONFIG?.PowerRollEffect?.forced?.properties;
   if (forcedProps) {
-    forcedProps['no-collision-damage'] = { label: 'DSCT.FM.Property.NoCollisionDamage' };
-    forcedProps['fast-auto-path']      = { label: 'DSCT.FM.Property.FastAutoPath' };
+    forcedProps['no-collision-damage']        = { label: 'DSCT.FM.Property.NoCollisionDamage' };
+    forcedProps['no-mover-collision-damage']  = { label: 'DSCT.FM.Property.NoMoverCollisionDamage' };
+    forcedProps['no-obstacle-collision-damage'] = { label: 'DSCT.FM.Property.NoObstacleCollisionDamage' };
+    forcedProps['fast-auto-path']             = { label: 'DSCT.FM.Property.FastAutoPath' };
   }
   const appliedProps = ds?.CONFIG?.PowerRollEffect?.applied?.properties;
   if (appliedProps) {
@@ -392,10 +396,12 @@ function _registerButtonHooks() {
           e.stopPropagation();
           const st = states[i];
           const props = new Set([
-            st.vertical          ? 'vertical'           : null,
-            st.noCollisionDamage ? 'no-collision-damage' : null,
-            st.ignoreStability   ? 'ignore-stability'    : null,
-            st.fastMove          ? 'fast-auto-path'      : null,
+            st.vertical                ? 'vertical'                    : null,
+            st.noCollisionDamage       ? 'no-collision-damage'         : null,
+            st.noMoverCollisionDamage  ? 'no-mover-collision-damage'   : null,
+            st.noObstacleCollisionDamage ? 'no-obstacle-collision-damage' : null,
+            st.ignoreStability         ? 'ignore-stability'             : null,
+            st.fastMove                ? 'fast-auto-path'               : null,
           ].filter(Boolean));
           const vertDist = st.vertical
             ? (st.verticalDistance !== '' ? Number(st.verticalDistance) : st.distance)

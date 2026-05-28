@@ -38,6 +38,7 @@ const _pickCanvasToken = (candidates, color, hint) => new Promise(resolve => {
   document.addEventListener('contextmenu', onCancel);
 });
 
+
 class TransformPicker extends ds.applications.api.DSApplication {
   constructor(actors, title, resolve) {
     super();
@@ -94,8 +95,10 @@ class TransformPicker extends ds.applications.api.DSApplication {
   }
 }
 
+
 export const openTransformPicker = (actors, title) =>
   new Promise(resolve => new TransformPicker(actors, title, resolve).render({ force: true }));
+
 
 export const runTransform = async (target, actors, title = 'Transform', { color = 0x00aaff, hint } = {}) => {
   let token;

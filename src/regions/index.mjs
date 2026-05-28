@@ -10,6 +10,7 @@ Hooks.once('init', () => {
   registerRegionEffectBehaviors();
 });
 
+
 Hooks.once('socketlib.ready', () => {
   const socket = game.modules.get('draw-steel-combat-tools').api?.socket;
   if (!socket) return;

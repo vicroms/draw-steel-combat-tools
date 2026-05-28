@@ -419,9 +419,11 @@ function _buildBaseState(movementType, distance, properties, verticalDistance, f
     vertical:          properties.has('vertical'),
     verticalDistance:  verticalDistance > 0 ? verticalDistance : '',
     fallReduction:     fallReduction,
-    noFallDamage:      false,
-    noCollisionDamage: properties.has('no-collision-damage'),
-    ignoreStability:   properties.has('ignore-stability'),
+    noFallDamage:              false,
+    noCollisionDamage:         properties.has('no-collision-damage'),
+    noMoverCollisionDamage:    properties.has('no-mover-collision-damage'),
+    noObstacleCollisionDamage:  properties.has('no-obstacle-collision-damage'),
+    ignoreStability:           properties.has('ignore-stability'),
     fastMove:          properties.has('fast-auto-path'),
   };
 }
@@ -690,10 +692,12 @@ async function _injectFmButtons(message, root) {
           const cur        = _fmState.get(stateKey) ?? saved;
           const clickState = _effectiveState(baseState, cur.modStack);
           const props      = new Set([
-            clickState.vertical          ? 'vertical'            : null,
-            clickState.noCollisionDamage ? 'no-collision-damage'  : null,
-            clickState.ignoreStability   ? 'ignore-stability'     : null,
-            clickState.fastMove          ? 'fast-auto-path'       : null,
+            clickState.vertical                ? 'vertical'                    : null,
+            clickState.noCollisionDamage       ? 'no-collision-damage'         : null,
+            clickState.noMoverCollisionDamage  ? 'no-mover-collision-damage'   : null,
+            clickState.noObstacleCollisionDamage ? 'no-obstacle-collision-damage' : null,
+            clickState.ignoreStability         ? 'ignore-stability'             : null,
+            clickState.fastMove                ? 'fast-auto-path'               : null,
           ].filter(Boolean));
           const vertDist = clickState.vertical
             ? (clickState.verticalDistance !== '' ? Number(clickState.verticalDistance) : clickState.distance)

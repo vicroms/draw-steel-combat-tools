@@ -10,21 +10,25 @@ export const replayModifiers = (baseStates, stack, states) => {
     st.verticalDistance  = base.verticalDistance;
     st.fallReduction     = base.fallReduction;
     st.noFallDamage      = base.noFallDamage;
-    st.noCollisionDamage = base.noCollisionDamage;
-    st.ignoreStability   = base.ignoreStability;
-    st.fastMove          = base.fastMove;
+    st.noCollisionDamage        = base.noCollisionDamage;
+    st.noMoverCollisionDamage   = base.noMoverCollisionDamage;
+    st.noObstacleCollisionDamage = base.noObstacleCollisionDamage;
+    st.ignoreStability          = base.ignoreStability;
+    st.fastMove                 = base.fastMove;
     for (const entry of stack) {
       const m = entry.modState[i];
       if (!m) continue;
-      st.distance         += m.distanceDelta;
-      st.movement          = m.movement;
-      st.vertical          = m.vertical;
-      st.verticalDistance  = m.verticalDistance;
-      st.fallReduction     = m.fallReduction;
-      st.noFallDamage      = m.noFallDamage;
-      st.noCollisionDamage = m.noCollisionDamage;
-      st.ignoreStability   = m.ignoreStability;
-      st.fastMove          = m.fastMove;
+      st.distance                  += m.distanceDelta;
+      st.movement                   = m.movement;
+      st.vertical                   = m.vertical;
+      st.verticalDistance           = m.verticalDistance;
+      st.fallReduction              = m.fallReduction;
+      st.noFallDamage               = m.noFallDamage;
+      st.noCollisionDamage          = m.noCollisionDamage;
+      st.noMoverCollisionDamage     = m.noMoverCollisionDamage;
+      st.noObstacleCollisionDamage   = m.noObstacleCollisionDamage;
+      st.ignoreStability            = m.ignoreStability;
+      st.fastMove                   = m.fastMove;
     }
   }
   console.log(`DSCT | replayModifiers | stack depth=${stack.length} states=${JSON.stringify(states.map(st => ({ movement: st.movement, distance: st.distance })))}`);
@@ -122,10 +126,12 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
         vertical:          tmp.vertical,
         verticalDistance:  tmp.verticalDistance,
         fallReduction:     tmp.fallReduction,
-        noFallDamage:      tmp.noFallDamage,
-        noCollisionDamage: tmp.noCollisionDamage,
-        ignoreStability:   tmp.ignoreStability,
-        fastMove:          tmp.fastMove,
+        noFallDamage:              tmp.noFallDamage,
+        noCollisionDamage:         tmp.noCollisionDamage,
+        noMoverCollisionDamage:    tmp.noMoverCollisionDamage,
+        noObstacleCollisionDamage:  tmp.noObstacleCollisionDamage,
+        ignoreStability:           tmp.ignoreStability,
+        fastMove:                  tmp.fastMove,
       };
     });
 
@@ -170,9 +176,12 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
     const vdRaw          = root.querySelector(`[data-field="vertDist-${i}"]`)?.value   ?? '';
     st.verticalDistance  = vdRaw !== '' ? (parseInt(vdRaw) || '') : '';
     st.fallReduction     = parseInt(root.querySelector(`[data-field="fallRed-${i}"]`)?.value) || 0;
-    st.noFallDamage      = root.querySelector(`[data-field="noFall-${i}"]`)?.checked   ?? st.noFallDamage;
-    st.noCollisionDamage = root.querySelector(`[data-field="noCol-${i}"]`)?.checked    ?? st.noCollisionDamage;
-    st.ignoreStability   = root.querySelector(`[data-field="ignoreStab-${i}"]`)?.checked ?? st.ignoreStability;
+    st.noFallDamage             = root.querySelector(`[data-field="noFall-${i}"]`)?.checked      ?? st.noFallDamage;
+    const colDmgVal             = root.querySelector(`[data-field="colDmg-${i}"]`)?.value ?? 'all';
+    st.noCollisionDamage        = colDmgVal === 'none';
+    st.noMoverCollisionDamage   = colDmgVal === 'no-mover';
+    st.noObstacleCollisionDamage = colDmgVal === 'no-obstacle';
+    st.ignoreStability          = root.querySelector(`[data-field="ignoreStab-${i}"]`)?.checked  ?? st.ignoreStability;
     st.fastMove          = root.querySelector(`[data-field="fast-${i}"]`)?.checked     ?? st.fastMove;
   }
 
@@ -214,11 +223,19 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
               style="width:36px;text-align:center;" title="Bonus on top of Agility">
           </div>
 
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="dsct-section-label">Collision Damage</div>
+            <select data-field="colDmg-${i}" style="width:175px;">
+              <option value="all"        ${ (!state.noCollisionDamage && !state.noMoverCollisionDamage && !state.noObstacleCollisionDamage) ? 'selected' : ''}>All Take Damage</option>
+              <option value="no-mover"   ${(!state.noCollisionDamage &&  state.noMoverCollisionDamage)   ? 'selected' : ''}>Moved Takes No Damage</option>
+              <option value="no-obstacle" ${(!state.noCollisionDamage &&  state.noObstacleCollisionDamage) ? 'selected' : ''}>Obstacles Take No Damage</option>
+              <option value="none"       ${ state.noCollisionDamage                                      ? 'selected' : ''}>No Collision Damage</option>
+            </select>
+          </div>
+
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
             <label style="color:var(--dsct-accent);font-size:10px;font-weight:bold;display:flex;align-items:center;gap:4px;cursor:pointer;">
               <input type="checkbox" data-field="noFall-${i}" ${state.noFallDamage ? 'checked' : ''}> No Fall Damage</label>
-            <label style="color:var(--dsct-accent);font-size:10px;font-weight:bold;display:flex;align-items:center;gap:4px;cursor:pointer;">
-              <input type="checkbox" data-field="noCol-${i}" ${state.noCollisionDamage ? 'checked' : ''}> No Collision Damage</label>
             <label style="color:var(--dsct-accent);font-size:10px;font-weight:bold;display:flex;align-items:center;gap:4px;cursor:pointer;">
               <input type="checkbox" data-field="ignoreStab-${i}" ${state.ignoreStability ? 'checked' : ''}> Ignore Stability</label>
             <label style="color:var(--dsct-accent);font-size:10px;font-weight:bold;display:flex;align-items:center;gap:4px;cursor:pointer;">
@@ -266,9 +283,9 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
         setChk('vertical',   m.vertical           ?? false);
         setVal('vertDist',   m.verticalDistance   ?? '');
         setVal('fallRed',    m.fallReduction      ?? 0);
-        setChk('noFall',     m.noFallDamage       ?? false);
-        setChk('noCol',      m.noCollisionDamage  ?? false);
-        setChk('ignoreStab', m.ignoreStability    ?? false);
+        setChk('noFall', m.noFallDamage ?? false);
+        setVal('colDmg', m.noCollisionDamage ? 'none' : m.noMoverCollisionDamage ? 'no-mover' : m.noObstacleCollisionDamage ? 'no-obstacle' : 'all');
+        setChk('ignoreStab', m.ignoreStability ?? false);
         setChk('fast',       m.fastMove           ?? false);
       }
     };
@@ -319,17 +336,20 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
 
         const modState = this._states.map((_, i) => {
           const get = (f) => root.querySelector(`[data-field="${f}-${i}"]`);
-          const vdRaw = get('vertDist')?.value ?? '';
+          const vdRaw    = get('vertDist')?.value ?? '';
+          const colDmgV  = get('colDmg')?.value ?? 'all';
           return {
-            distanceDelta:    parseInt(get('distance')?.value)  || 0,
-            movement:         get('type')?.value                ?? 'push',
-            vertical:         get('vertical')?.checked          ?? false,
-            verticalDistance: vdRaw !== '' ? (parseInt(vdRaw) || '') : '',
-            fallReduction:    parseInt(get('fallRed')?.value)   || 0,
-            noFallDamage:     get('noFall')?.checked            ?? false,
-            noCollisionDamage: get('noCol')?.checked            ?? false,
-            ignoreStability:  get('ignoreStab')?.checked        ?? false,
-            fastMove:         get('fast')?.checked              ?? false,
+            distanceDelta:           parseInt(get('distance')?.value) || 0,
+            movement:                get('type')?.value               ?? 'push',
+            vertical:                get('vertical')?.checked         ?? false,
+            verticalDistance:        vdRaw !== '' ? (parseInt(vdRaw) || '') : '',
+            fallReduction:           parseInt(get('fallRed')?.value)  || 0,
+            noFallDamage:            get('noFall')?.checked           ?? false,
+            noCollisionDamage:       colDmgV === 'none',
+            noMoverCollisionDamage:  colDmgV === 'no-mover',
+            noObstacleCollisionDamage: colDmgV === 'no-obstacle',
+            ignoreStability:         get('ignoreStab')?.checked       ?? false,
+            fastMove:                get('fast')?.checked             ?? false,
           };
         });
 

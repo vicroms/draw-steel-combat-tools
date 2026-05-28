@@ -409,6 +409,8 @@
     "FM": {
       "Property": {
         "NoCollisionDamage": "No Collision Damage",
+        "NoMoverCollisionDamage": "No Mover Collision Damage",
+        "NoObstacleCollisionDamage": "No Obstacle Collision Damage",
         "FastAutoPath": "Fast Auto-Path",
         "IgnoreSize": "Ignore Size"
       }
@@ -448,7 +450,11 @@
         "vertical": "Vertical",
         "fallReduction": "Fall Reduction",
         "noFallDamage": "No Fall Damage",
-        "noCollisionDamage": "No Collision Damage",
+        "collisionDamage": "Collision Damage",
+        "colAll": "All Take Damage",
+        "colNoMover": "Moved Takes No Damage",
+        "colNoObstacle": "Obstacles Take No Damage",
+        "colNone": "No Collision Damage",
         "ignoreStability": "Ignore Stability",
         "fastAutoPath": "Fast Auto-Path",
         "juggernaut": "Juggernaut Mode",
