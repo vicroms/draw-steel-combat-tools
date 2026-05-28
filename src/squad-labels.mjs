@@ -1,5 +1,5 @@
 import { safeCreateEmbedded, safeDelete, getSetting, monsterFilter as filter } from './helpers.mjs';
-import { runMultiTokenPicker } from './ability-automation/target-picker.mjs';
+import { runMultiTokenPicker, runColoredTokenPicker } from './ability-automation/target-picker.mjs';
 
 const M         = 'draw-steel-combat-tools';
 const ICON_PATH = 'modules/draw-steel-combat-tools/assets/Icons';
@@ -188,63 +188,126 @@ let _suppressGroupDeleteRelabel = false;
 let _suppressCaptainRelabel = false;
 const _captainFellSent = new Set();
 
-const _processCaptainQueue = async (groups, combat) => {
-  for (const group of groups) {
-    const liveMinions = [...group.members].filter(m => m.actor?.system?.isMinion && !m.defeated);
-    if (!liveMinions.length) continue;
+const _assignCaptain = async (chosenToken, group, combat) => {
+  const chosenCombatant = combat.combatants.find(c => c.tokenId === chosenToken.id);
+  if (!chosenCombatant) return;
 
-    const candidates = _findCaptainCandidates(group, combat);
+  const oldGroup = chosenCombatant.group?.id !== group.id ? chosenCombatant.group : null;
 
-    if (!candidates.length) {
-      ui.notifications.info(game.i18n.format('DSCT.notice.squads.noCaptainCandidates', { group: group.name }));
-      continue;
+  await combat.updateEmbeddedDocuments('Combatant', [{ _id: chosenCombatant.id, group: group.id }]);
+  _suppressCaptainRelabel = true;
+  try {
+    await group.update({ 'system.captainId': chosenCombatant.id });
+  } finally {
+    _suppressCaptainRelabel = false;
+  }
+
+  if (oldGroup && [...oldGroup.members].length === 0) {
+    _suppressGroupDeleteRelabel = true;
+    try {
+      await combat.deleteEmbeddedDocuments('CombatantGroup', [oldGroup.id]);
+    } finally {
+      _suppressGroupDeleteRelabel = false;
     }
+    await autoRenameGroups();
+  }
 
-    let chosenToken;
-    if (candidates.length === 1) {
-      chosenToken = candidates[0];
-      ui.notifications.info(game.i18n.format('DSCT.notice.squads.captainAutoSelected', {
-        name: chosenToken.name, group: group.name,
-      }));
-    } else {
+  await applySquadLabels();
+  await updateWithCaptainEffects();
+
+  ChatMessage.create({ content: game.i18n.format('DSCT.chat.squads.newCaptain', {
+    name: chosenToken.name, group: group.name,
+  }) });
+};
+
+const _processCaptainQueue = async (groups, combat) => {
+  const validGroups = groups.filter(g =>
+    [...g.members].some(m => m.actor?.system?.isMinion && !m.defeated)
+  );
+  if (!validGroups.length) return;
+
+  
+  const seenIds = new Set();
+  const allCandidateTokens = [];
+  for (const group of validGroups) {
+    for (const c of _findCaptainCandidates(group, combat)) {
+      if (!seenIds.has(c.id)) { seenIds.add(c.id); allCandidateTokens.push(c); }
+    }
+  }
+
+  if (!allCandidateTokens.length) {
+    for (const group of validGroups) {
+      ui.notifications.info(game.i18n.format('DSCT.notice.squads.noCaptainCandidates', { group: group.name }));
+    }
+    return;
+  }
+
+  
+  if (getSetting('squadCaptainShortcut') && allCandidateTokens.length === validGroups.length) {
+    const assignedIds = new Set();
+    for (const group of validGroups) {
+      const candidates = _findCaptainCandidates(group, combat).filter(t => !assignedIds.has(t.id));
+      if (!candidates.length) continue;
+      assignedIds.add(candidates[0].id);
+      await _assignCaptain(candidates[0], group, combat);
+    }
+    return;
+  }
+
+  if (allCandidateTokens.length < validGroups.length) {
+    
+    
+    let remainingGroups = [...validGroups];
+    for (const candidateToken of allCandidateTokens) {
+      if (!remainingGroups.length) break;
+
+      const colorMap = new Map();
+      for (const group of remainingGroups) {
+        const num = parseInt(group.name.match(/^Group (\d+)/i)?.[1]);
+        const css = GROUP_TINTS[num] ?? '#ffffff';
+        for (const m of group.members) {
+          if (m.defeated || !m.actor?.system?.isMinion) continue;
+          const tok = canvas.tokens.placeables.find(t => t.id === m.tokenId);
+          if (tok) colorMap.set(tok.id, css);
+        }
+      }
+
+      const minionTokens = [...colorMap.keys()]
+        .map(id => canvas.tokens.placeables.find(t => t.id === id))
+        .filter(Boolean);
+      if (!minionTokens.length) continue;
+
+      const picked = await runColoredTokenPicker({
+        tokens: minionTokens,
+        colorMap,
+        hint: game.i18n.format('DSCT.notice.squads.pickSquadForCaptain', { name: candidateToken.name }),
+      });
+      if (!picked) continue;
+
+      const squad = remainingGroups.find(g =>
+        [...g.members].some(m => m.tokenId === picked.id && m.actor?.system?.isMinion)
+      );
+      if (!squad) continue;
+
+      await _assignCaptain(candidateToken, squad, combat);
+      remainingGroups = remainingGroups.filter(g => g.id !== squad.id);
+    }
+  } else {
+    
+    for (const group of validGroups) {
+      const candidates = _findCaptainCandidates(group, combat);
+      if (!candidates.length) {
+        ui.notifications.info(game.i18n.format('DSCT.notice.squads.noCaptainCandidates', { group: group.name }));
+        continue;
+      }
       const picked = await runMultiTokenPicker({
         candidates,
         hint: game.i18n.format('DSCT.notice.squads.pickCaptain', { group: group.name }),
         maxTargets: 1,
       });
       if (!picked?.length) continue;
-      chosenToken = picked[0];
+      await _assignCaptain(picked[0], group, combat);
     }
-
-    const chosenCombatant = combat.combatants.find(c => c.tokenId === chosenToken.id);
-    if (!chosenCombatant) continue;
-
-    const oldGroup = chosenCombatant.group?.id !== group.id ? chosenCombatant.group : null;
-
-    await combat.updateEmbeddedDocuments('Combatant', [{ _id: chosenCombatant.id, group: group.id }]);
-    _suppressCaptainRelabel = true;
-    try {
-      await group.update({ 'system.captainId': chosenCombatant.id });
-    } finally {
-      _suppressCaptainRelabel = false;
-    }
-
-    if (oldGroup && [...oldGroup.members].length === 0) {
-      _suppressGroupDeleteRelabel = true;
-      try {
-        await combat.deleteEmbeddedDocuments('CombatantGroup', [oldGroup.id]);
-      } finally {
-        _suppressGroupDeleteRelabel = false;
-      }
-      await autoRenameGroups();
-    }
-
-    await applySquadLabels();
-    await updateWithCaptainEffects();
-
-    ChatMessage.create({ content: game.i18n.format('DSCT.chat.squads.newCaptain', {
-      name: chosenToken.name, group: group.name,
-    }) });
   }
 };
 

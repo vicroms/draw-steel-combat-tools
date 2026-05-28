@@ -209,6 +209,10 @@
         "name": "I Am The Captain Now",
         "hint": "Prompt the Director to assign a captain to minion squads that lack one at the start of combat or start of the round."
       },
+      "squadCaptainShortcut": {
+        "name": "Captain Shortcut Assignment",
+        "hint": "When enabled and the number of available captain candidates exactly matches the number of squads needing a captain, automatically assign each candidate to a squad without opening the picker."
+      },
       "autoTriggeredActionsEnabled": {
         "name": "Triggered Action Tracker",
         "hint": "Automatically place the Unspent Triggered Action effect on set combatants when combat starts, which then gets removed upon using a Triggered Action ability and is refreshed at round start."
@@ -730,9 +734,9 @@
         "renamedAndLabeled": "Combat squads renamed and labels applied.",
         "labelsAppliedExisting": "Squad labels applied to existing groups.",
         "noCaptainCandidates": "No valid captain candidates found for {group}.",
-        "pickCaptain": "Click a token to become captain of {group}. Right-click or Escape to skip.",
+        "pickCaptain": "Click a token to become captain of {group}. Escape to skip.",
         "captainAssigned": "{name} is now captain of {group}.",
-        "captainAutoSelected": "{name} is the only valid candidate and has been assigned as captain of {group}."
+        "pickSquadForCaptain": "Click a minion to assign {name} as their captain (colors indicate squads). Escape to skip."
       },
       "noCompatModules": "No compatible modules detected. Enable a supported module (like DS Quick Strike or DS Terrain Designer) to see compatibility settings.",
       "conflict": {
