@@ -237,6 +237,15 @@
         "name": "Floating Squad HUD",
         "hint": "Replaces individual minion token health bars with a shared floating bar for each squad. The bar shows the squad name, a segmented fill per minion, and live HP numbers. Hovering any minion or the bar fades in lines linking the bar to each squad member."
       },
+      "squadHudPlayerVisibility": {
+        "name": "Squad HUD Player Visibility",
+        "hint": "Controls what players see of the Squad HUD. Directors always see the full HUD.",
+        "choice": {
+          "all":  "Full (bar and HP numbers)",
+          "bar":  "Bar only (no HP numbers)",
+          "none": "Hidden (individual token bars restored)"
+        }
+      },
       "stickbugMode": {
         "name": "Get Stick Bugged",
         "hint": "Teaches the squad health bars a new skill."

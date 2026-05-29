@@ -689,7 +689,7 @@ export class SquadLabelsSettingsMenu extends SettingsSubmenu {
   static get enableKey()   { return 'autoSquadLabelsEnabled'; }
 
   static get regularKeys() {
-    return ['autoSquadLabelsEnabled', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadHudEnabled'];
+    return ['autoSquadLabelsEnabled', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadHudEnabled', 'squadHudPlayerVisibility'];
   }
 
   static get debugKeys() { return ['stickbugMode', 'stickbugChatTrigger']; }

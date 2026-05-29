@@ -320,6 +320,16 @@ export const registerSettings = () => {
     name: L('squadHudEnabled.name'), hint: L('squadHudEnabled.hint'),
     scope: 'world', config: false, type: Boolean, default: false,
   });
+  game.settings.register(M, 'squadHudPlayerVisibility', {
+    name: L('squadHudPlayerVisibility.name'), hint: L('squadHudPlayerVisibility.hint'),
+    scope: 'world', config: false, type: String,
+    choices: {
+      'all':  L('squadHudPlayerVisibility.choice.all'),
+      'bar':  L('squadHudPlayerVisibility.choice.bar'),
+      'none': L('squadHudPlayerVisibility.choice.none'),
+    },
+    default: 'all',
+  });
   game.settings.register(M, 'stickbugMode', {
     name: L('stickbugMode.name'), hint: L('stickbugMode.hint'),
     scope: 'world', config: false, type: Boolean, default: false,

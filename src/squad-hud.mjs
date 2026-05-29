@@ -79,6 +79,39 @@ function _centroid(tokens) {
 }
 
 
+function _hudTargetPos(tokens) {
+  if (!tokens?.length) return null;
+  const gs  = canvas.grid.size;
+  const gap = 10;
+
+  let sx = 0, sy = 0;
+  for (const t of tokens) {
+    sx += t.x + (t.document.width  ?? 1) * gs / 2;
+    sy += t.y + (t.document.height ?? 1) * gs / 2;
+  }
+  const hx = Math.round(sx / tokens.length - HUD_W / 2);
+  let   hy = Math.round(sy / tokens.length - HUD_H / 2);
+
+  for (let pass = 0; pass < 2; pass++) {
+    for (const t of tokens) {
+      const tw = (t.document.width  ?? 1) * gs;
+      const th = (t.document.height ?? 1) * gs;
+      if (t.x + tw <= hx || t.x >= hx + HUD_W) continue; 
+      if (t.y + th <= hy || t.y >= hy + HUD_H) continue; 
+      hy = Math.min(hy, Math.round(t.y - HUD_H - gap));   
+    }
+  }
+
+  const rect = canvas.dimensions?.rect;
+  if (rect) {
+    hx = Math.max(rect.x, Math.min(hx, rect.x + rect.width  - HUD_W));
+    hy = Math.max(rect.y, Math.min(hy, rect.y + rect.height - HUD_H));
+  }
+
+  return { x: hx, y: hy };
+}
+
+
 
 function _txt(str, style) {
   const t = new PIXI.Text(str, style);
@@ -88,6 +121,15 @@ function _txt(str, style) {
 
 
 const _easeInOutCosine = t => (1 - Math.cos(Math.PI * t)) / 2;
+
+
+function _effectivePlayerVis(tokens) {
+  if (game.user.isGM) return 'all';
+  const override = tokens.some(t =>
+    t.document.isOwner || t.document.disposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY
+  );
+  return override ? 'all' : getSetting('squadHudPlayerVisibility');
+}
 
 function _lerpColor(a, b, t) {
   const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, abl = a & 0xff;
@@ -188,7 +230,7 @@ function _openHudEditor(entry) {
   }, 50);
 }
 
-function _buildContainer(data, entry) {
+function _buildContainer(data, entry, vis = 'all') {
   const { name, total, living, currHP, maxHP, tokens } = data;
   const c = new PIXI.Container();
   c.eventMode = 'static';
@@ -230,7 +272,7 @@ function _buildContainer(data, entry) {
   const hpTx  = _txt(hpStr, { fontSize: 14, fill: 0xdddddd });
   hpTx.x = Math.round(HUD_W / 2 - hpTx.width / 2);
   hpTx.y = barY + BAR_H + 4;
-  c.addChild(hpTx);
+  if (vis !== 'bar') c.addChild(hpTx);
 
   
   const lockSvg = new PIXI.SVGResource('icons/svg/padlock.svg', { scale: (window.devicePixelRatio || 1) * 4 });
@@ -324,9 +366,12 @@ function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
   const hcy = container.y + HUD_H / 2;
 
   
+  
   const paths = [];
+  let visibleIdx = 0;
   for (let i = 0; i < tokens.length; i++) {
     const t   = tokens[i];
+    if (!t.visible) continue;
     const tw  = (t.document.width  ?? 1) * gs;
     const th  = (t.document.height ?? 1) * gs;
     const tcx = t.x + tw / 2;
@@ -334,7 +379,7 @@ function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
     const dx  = hcx - tcx;
     const dy  = hcy - tcy;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.5) continue;
+    if (len < 0.5) { visibleIdx++; continue; }
     const r    = Math.min(tw, th) / 2;
     const from = { x: tcx + (dx / len) * r, y: tcy + (dy / len) * r };
     const to   = _lineExitBox(hcx, hcy, -dx, -dy, container.x, container.y, HUD_W, HUD_H);
@@ -343,17 +388,19 @@ function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
       const amp = Math.min(len * 0.2, 38);
       const px  = -dy / len;
       const py  =  dx / len;
-      const dir = (i % 2 === 0) ? 1 : -1;
+      
+      const dir = (visibleIdx % 2 === 0) ? 1 : -1;
       let kneeOff;
       if (isInArrange) {
         kneeOff = dir * amp * kneeScale;
       } else {
-        const phase = (i % 2 === 0) ? 0 : Math.PI;
+        const phase = (visibleIdx % 2 === 0) ? 0 : Math.PI;
         kneeOff = Math.tanh(Math.sin(_stickbugTime * 12.5 + phase) * 2.5) * amp * kneeScale;
       }
       knee = { x: (from.x + to.x) / 2 + px * kneeOff, y: (from.y + to.y) / 2 + py * kneeOff };
     }
     paths.push({ from, knee, to });
+    visibleIdx++;
   }
 
   const drawPaths = () => {
@@ -430,11 +477,13 @@ export function rebuildSquadHuds() {
     _restoreTokenBars(prevTokenIds, new Set());
     return;
   }
-
   for (const data of _squadDataList()) {
-    const centroid = _centroid(data.tokens);
-    if (!centroid) continue;
-    const { x, y } = centroid;
+    const vis = _effectivePlayerVis(data.tokens);
+    if (vis === 'none') continue;
+
+    const hudPos = _hudTargetPos(data.tokens);
+    if (!hudPos) continue;
+    const { x, y } = hudPos;
 
     
     const lineGfx = new PIXI.Graphics();
@@ -468,15 +517,15 @@ export function rebuildSquadHuds() {
       _sbSwayY:  0,
     };
 
-    const { container, lockGfx, barGfx, repToken, nativeW, nativeH } = _buildContainer(data, entry);
+    const { container, lockGfx, barGfx, repToken, nativeW, nativeH } = _buildContainer(data, entry, vis);
     entry.container = container;
     entry.lockGfx   = lockGfx;
     entry.barGfx    = barGfx;
     entry.repToken  = repToken;
     entry.nativeW   = nativeW;
     entry.nativeH   = nativeH;
-    container.x = Math.round(x - HUD_W / 2);
-    container.y = Math.round(y - HUD_H - 16);
+    container.x = x;
+    container.y = y;
     canvas.controls.addChild(container);
 
     _redrawLines(lineGfx, container, data.tokens, data.tint);
@@ -595,10 +644,10 @@ function _tickHuds() {
 
     
     if (entry.gliding) {
-      const cen = _centroid(entry.tokens);
-      if (!cen) { entry.gliding = false; continue; }
-      const tx = Math.round(cen.x - HUD_W / 2);
-      const ty = Math.round(cen.y - HUD_H - 16);
+      const pos = _hudTargetPos(entry.tokens);
+      if (!pos) { entry.gliding = false; continue; }
+      const tx = pos.x;
+      const ty = pos.y;
       const dx = tx - entry.container.x;
       const dy = ty - entry.container.y;
       if (!isFinite(dx) || !isFinite(dy)) { entry.gliding = false; continue; }
@@ -621,10 +670,10 @@ export function nudgeSquadHud(tokenId) {
   for (const entry of _squadHuds.values()) {
     if (!entry.tokens.some(t => t.id === tokenId)) continue;
     if (!entry.locked && !entry.gliding) {
-      const cen = _centroid(entry.tokens);
-      if (!cen) continue;
-      entry.container.x = Math.round(cen.x - HUD_W / 2);
-      entry.container.y = Math.round(cen.y - HUD_H - 16);
+      const pos = _hudTargetPos(entry.tokens);
+      if (!pos) continue;
+      entry.container.x = pos.x;
+      entry.container.y = pos.y;
     }
     
     if (!entry.gliding) _redrawLines(entry.lineGfx, entry.container, entry.tokens, entry.tint);
@@ -731,6 +780,9 @@ export function registerSquadHudHooks() {
   Hooks.on('refreshToken', (token) => {
     nudgeSquadHud(token.id);
     if (!getSetting('squadHudEnabled')) return;
+    if (!game.user.isGM && getSetting('squadHudPlayerVisibility') === 'none') {
+      if (!token.document.isOwner && token.document.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY) return;
+    }
     if (!token.actor?.system?.isMinion) return;
     if (!game.combat) return;
     const combatant = game.combat.combatants.find(c => c.tokenId === token.id);
@@ -771,6 +823,10 @@ export function registerSquadHudHooks() {
     function(wrapped, number, bar, data) {
       if (_drawBarFromHud) return wrapped(number, bar, data);
       if (!getSetting('squadHudEnabled')) return wrapped(number, bar, data);
+      if (!game.user.isGM && getSetting('squadHudPlayerVisibility') === 'none') {
+        if (!this.document.isOwner && this.document.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY)
+          return wrapped(number, bar, data);
+      }
       if (!this.actor?.system?.isMinion)  return wrapped(number, bar, data);
       if (!game.combat) return wrapped(number, bar, data);
       const combatant = game.combat.combatants.find(c => c.tokenId === this.id);
