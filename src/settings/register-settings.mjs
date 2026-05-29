@@ -326,7 +326,7 @@ export const registerSettings = () => {
   });
   game.settings.register(M, 'stickbugChatTrigger', {
     name: L('stickbugChatTrigger.name'), hint: L('stickbugChatTrigger.hint'),
-    scope: 'world', config: false, type: Boolean, default: false,
+    scope: 'world', config: false, type: Boolean, default: true,
   });
 
   game.settings.registerMenu(M, 'triggeredActionsSettings', {

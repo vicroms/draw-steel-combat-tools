@@ -1,4 +1,4 @@
-import { getSetting } from './helpers.mjs';
+﻿import { getSetting } from './helpers.mjs';
 
 const M = 'draw-steel-combat-tools';
 
@@ -16,6 +16,7 @@ const GROUP_TINTS = {
   9: 0x00ff88, 10: 0xff88aa,
 };
 
+
 const _squadHuds = new Map();
 let _hudTicker   = null;
 let _moveHandler = null;
@@ -30,6 +31,8 @@ let _lastStickbugTrigger  = 0;
 const ARRANGE_DUR     = 2000;  
 const DANCE_DUR       = 15000; 
 const STICKBUG_COOLDOWN = 60000; 
+
+
 
 function _squadDataList() {
   if (!game.combat || !canvas?.tokens) return [];
@@ -75,23 +78,14 @@ function _centroid(tokens) {
   return { x: sx / tokens.length, y: sy / tokens.length };
 }
 
+
+
 function _txt(str, style) {
   const t = new PIXI.Text(str, style);
-  t.resolution = (window.devicePixelRatio || 1) * 2;
+  t.resolution = (window.devicePixelRatio || 1) * 4;
   return t;
 }
 
-function _drawLock(gfx, x, y, size) {
-  gfx.clear();
-  
-  gfx.lineStyle(Math.ceil(size * 0.18), 0xcccccc);
-  gfx.arc(x + size / 2, y + size * 0.42, size * 0.28, Math.PI, 0, false);
-  
-  gfx.lineStyle(0);
-  gfx.beginFill(0xcccccc, 0.9);
-  gfx.drawRoundedRect(x, y + size * 0.42, size, size * 0.58, 2);
-  gfx.endFill();
-}
 
 const _easeInOutCosine = t => (1 - Math.cos(Math.PI * t)) / 2;
 
@@ -102,6 +96,7 @@ function _lerpColor(a, b, t) {
        | (Math.round(ag + (bg - ag) * t) << 8)
        |  Math.round(abl + (bbl - abl) * t);
 }
+
 
 function _drawBarGfx(barGfx, repToken, hp, maxHP, total, nativeW, nativeH) {
   if (!repToken || !barGfx || maxHP <= 0) return;
@@ -209,7 +204,7 @@ function _buildContainer(data, entry) {
 
   
   const nameTx = _txt(name, {
-    fontSize: 15, fill: 0xffffff, fontWeight: 'bold',
+    fontSize: 15, fill: data.tint, fontWeight: 'bold',
     stroke: 0x000000, strokeThickness: 2,
   });
   nameTx.x = Math.round(HUD_W / 2 - nameTx.width / 2);
@@ -238,9 +233,14 @@ function _buildContainer(data, entry) {
   c.addChild(hpTx);
 
   
-  const lockGfx = new PIXI.Graphics();
+  const lockSvg = new PIXI.SVGResource('icons/svg/padlock.svg', { scale: (window.devicePixelRatio || 1) * 4 });
+  const lockGfx = new PIXI.Sprite(new PIXI.Texture(new PIXI.BaseTexture(lockSvg)));
+  lockGfx.width   = 18;
+  lockGfx.height  = 18;
+  lockGfx.tint    = 0xcccccc;
+  lockGfx.x = HUD_W - 22;
+  lockGfx.y = 4;
   lockGfx.visible = false;
-  _drawLock(lockGfx, HUD_W - 16, 3, 12);
   c.addChild(lockGfx);
 
   
@@ -267,7 +267,7 @@ function _buildContainer(data, entry) {
 
     const local = ev.getLocalPosition(c);
     
-    if (entry.locked && local.x >= HUD_W - 18 && local.x <= HUD_W && local.y >= 1 && local.y <= 17) {
+    if (entry.locked && local.x >= HUD_W - 24 && local.x <= HUD_W - 2 && local.y >= 2 && local.y <= 24) {
       entry.locked  = false;
       entry.gliding = true;
       lockGfx.visible = false;
@@ -289,6 +289,7 @@ function _buildContainer(data, entry) {
 
   return { container: c, lockGfx, barGfx, repToken, nativeW, nativeH };
 }
+
 
 function _lineExitBox(px, py, dx, dy, bx, by, bw, bh) {
   let tBest = Infinity;
@@ -312,12 +313,18 @@ function _lineExitBox(px, py, dx, dy, bx, by, bw, bh) {
 function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
   lineGfx.clear();
   if (!tokens.length) return;
-  const isStickbug = getSetting('stickbugMode') || (_stickbugAnim !== null);
-  const lineColor  = isStickbug ? _lerpColor(tint ?? 0xffffff, 0x88ff88, kneeScale) : (tint ?? 0xffffff);
+
+  const isStickbug  = getSetting('stickbugMode') || (_stickbugAnim !== null);
+  const isInArrange = _stickbugAnim !== null && _stickbugAnim.elapsed < ARRANGE_DUR;
+  const lineColor   = isStickbug ? _lerpColor(tint ?? 0xffffff, 0x88ff88, kneeScale) : (tint ?? 0xffffff);
+  
+  const outlineAlpha = isStickbug ? (isInArrange ? (1 - kneeScale) * 0.75 : 0) : 0.75;
   const gs  = canvas.grid.size;
   const hcx = container.x + HUD_W / 2;
   const hcy = container.y + HUD_H / 2;
-  lineGfx.lineStyle(isStickbug ? 2.5 : 1.5, lineColor, 0.9);
+
+  
+  const paths = [];
   for (let i = 0; i < tokens.length; i++) {
     const t   = tokens[i];
     const tw  = (t.document.width  ?? 1) * gs;
@@ -328,21 +335,15 @@ function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
     const dy  = hcy - tcy;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 0.5) continue;
-    
     const r    = Math.min(tw, th) / 2;
     const from = { x: tcx + (dx / len) * r, y: tcy + (dy / len) * r };
-    
     const to   = _lineExitBox(hcx, hcy, -dx, -dy, container.x, container.y, HUD_W, HUD_H);
+    let knee = null;
     if (isStickbug) {
-      
       const amp = Math.min(len * 0.2, 38);
-      
       const px  = -dy / len;
       const py  =  dx / len;
       const dir = (i % 2 === 0) ? 1 : -1;
-      
-      
-      const isInArrange = _stickbugAnim !== null && _stickbugAnim.elapsed < ARRANGE_DUR;
       let kneeOff;
       if (isInArrange) {
         kneeOff = dir * amp * kneeScale;
@@ -350,19 +351,31 @@ function _redrawLines(lineGfx, container, tokens, tint, kneeScale = 1) {
         const phase = (i % 2 === 0) ? 0 : Math.PI;
         kneeOff = Math.tanh(Math.sin(_stickbugTime * 12.5 + phase) * 2.5) * amp * kneeScale;
       }
-      const knee  = {
-        x: (from.x + to.x) / 2 + px * kneeOff,
-        y: (from.y + to.y) / 2 + py * kneeOff,
-      };
+      knee = { x: (from.x + to.x) / 2 + px * kneeOff, y: (from.y + to.y) / 2 + py * kneeOff };
+    }
+    paths.push({ from, knee, to });
+  }
+
+  const drawPaths = () => {
+    for (const { from, knee, to } of paths) {
       lineGfx.moveTo(from.x, from.y);
-      lineGfx.lineTo(knee.x, knee.y);
-      lineGfx.lineTo(to.x, to.y);
-    } else {
-      lineGfx.moveTo(from.x, from.y);
+      if (knee) lineGfx.lineTo(knee.x, knee.y);
       lineGfx.lineTo(to.x, to.y);
     }
+  };
+
+  
+  if (outlineAlpha > 0.01) {
+    lineGfx.lineStyle(4.5, 0x000000, outlineAlpha);
+    drawPaths();
   }
+
+  
+  lineGfx.lineStyle(2.5, lineColor, 0.9);
+  drawPaths();
 }
+
+
 
 function _destroyEntry(entry) {
   if (entry.container?.parent) entry.container.parent.removeChild(entry.container);
@@ -618,6 +631,8 @@ export function nudgeSquadHud(tokenId) {
   }
 }
 
+
+
 function _registerHandlers() {
   _moveHandler = (event) => {
     const pos = event.data.getLocalPosition(canvas.app.stage);
@@ -690,6 +705,8 @@ export function getStickBugged() {
     canvas.app.ticker.add(_hudTicker);
   }
 }
+
+
 
 export function registerSquadHudHooks() {
   Hooks.on('canvasReady',    () => rebuildSquadHuds());
