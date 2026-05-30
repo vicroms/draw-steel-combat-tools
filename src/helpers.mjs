@@ -606,7 +606,7 @@ export const getItemRange = (item) => {
   const p = parseInt(dist.primary)   || 0;
   const s = parseInt(dist.secondary) || 0;
   const t = parseInt(dist.tertiary)  || 0;
-  if (dist.type === 'meleeRanged')                  return Math.max(p, s);
+  if (dist.type === 'meleeRanged')                  return (item.system?.damageDisplay ?? 'melee') === 'ranged' ? s : p;
   if (dist.type === 'line')                         return p + t;
   if (dist.type === 'cube' || dist.type === 'wall') return p + s;
   return p;
