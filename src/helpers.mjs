@@ -513,8 +513,19 @@ export const chooseFreeSquare = (targetToken, landedOnToken = null) => new Promi
   };
 
   let candidates = [];
-  for (let r = 1; r <= 10 && candidates.length === 0; r++) {
-    candidates = getAdjacentRing(r).filter(g => isSquareFree(g.x, g.y));
+  const invalidSquares = [];
+
+  const fallerSize = targetToken.actor?.system?.combat?.size?.value ?? 1;
+  if (landedOnToken && Math.abs(fallerSize - refSize) >= 2) {
+    candidates.push({ x: refTg.x, y: refTg.y });
+  }
+
+  for (let r = 1; r <= 10; r++) {
+    const ring = getAdjacentRing(r);
+    for (const g of ring) {
+      (isSquareFree(g.x, g.y) ? candidates : invalidSquares).push(g);
+    }
+    if (candidates.length > 0) break;
   }
 
   if (getSetting('debugMode')) {
@@ -524,17 +535,63 @@ export const chooseFreeSquare = (targetToken, landedOnToken = null) => new Promi
 
   if (candidates.length === 0) { resolve(null); return; }
 
+  const fallerW  = targetToken.document.width  ?? 1;
+  const fallerH  = targetToken.document.height ?? 1;
+  const fallerCx = targetToken.x + fallerW * G / 2;
+  const fallerCy = targetToken.y + fallerH * G / 2;
+
   const graphics = new PIXI.Graphics();
   canvas.app.stage.addChild(graphics);
 
+  const drawArrow = (toPx) => {
+    const dx = toPx.x - fallerCx, dy = toPx.y - fallerCy;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return;
+    const ux = dx / len, uy = dy / len;
+    const nx = -uy, ny = ux;
+    const thin = G * 0.08, wide = G * 0.19, HW = G * 0.33, HL = G * 0.46, tipExt = G * 0.3;
+    const baseX = toPx.x - ux * HL, baseY = toPx.y - uy * HL;
+    const poly = [
+      fallerCx + nx * thin, fallerCy + ny * thin,
+      baseX + nx * wide,    baseY + ny * wide,
+      baseX + nx * HW,      baseY + ny * HW,
+      toPx.x + ux * tipExt, toPx.y + uy * tipExt,
+      baseX - nx * HW,      baseY - ny * HW,
+      baseX - nx * wide,    baseY - ny * wide,
+      fallerCx - nx * thin, fallerCy - ny * thin,
+    ];
+    const SO   = 3;
+    const GLOW = [[G * 0.24, 0.07], [G * 0.15, 0.14], [G * 0.08, 0.30], [G * 0.03, 0.65]];
+    graphics.beginFill(0x000000, 0.22);
+    graphics.drawPolygon(poly.map((v, i) => v + SO));
+    graphics.drawCircle(fallerCx + SO, fallerCy + SO, thin);
+    graphics.endFill();
+    for (const [w, a] of GLOW) {
+      graphics.lineStyle(w, 0xffffff, a);
+      graphics.drawPolygon(poly);
+      graphics.drawCircle(fallerCx, fallerCy, thin);
+      graphics.lineStyle(0);
+    }
+    graphics.beginFill(0xdd1111, 1.0);
+    graphics.drawPolygon(poly);
+    graphics.drawCircle(fallerCx, fallerCy, thin);
+    graphics.endFill();
+  };
+
   const redrawHighlight = (hoverGrid) => {
     graphics.clear();
+    for (const g of invalidSquares) {
+      graphics.beginFill(0x880000, 0.4);
+      graphics.drawRect(g.x * G, g.y * G, G, G);
+      graphics.endFill();
+    }
     for (const g of candidates) {
       const isHover = hoverGrid && g.x === hoverGrid.x && g.y === hoverGrid.y;
       graphics.beginFill(0x44cc44, isHover ? 0.6 : 0.3);
       graphics.drawRect(g.x * G, g.y * G, G, G);
       graphics.endFill();
     }
+    if (hoverGrid) drawArrow({ x: hoverGrid.x * G + fallerW * G / 2, y: hoverGrid.y * G + fallerH * G / 2 });
   };
 
   const overlay = new PIXI.Container();
