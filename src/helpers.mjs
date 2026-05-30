@@ -483,7 +483,7 @@ const buildFallMessage = (name, fallDist, effectiveFall, dmg) => {
     : distPart + agilityNote + game.i18n.localize('DSCT.fall.agilityNotEnough');
 };
 
-export const chooseFreeSquare = (targetToken, landedOnToken = null) => new Promise((resolve) => {
+export const chooseFreeSquare = (targetToken, landedOnToken = null, { forceOnCancel = false } = {}) => new Promise((resolve) => {
   const G        = GRID();
   const refToken = landedOnToken ?? targetToken;
   const refTg    = toGrid(refToken.document);
@@ -616,7 +616,7 @@ export const chooseFreeSquare = (targetToken, landedOnToken = null) => new Promi
     resolve(chosen);
   };
 
-  const onKeyDown = (e) => { if (e.key === 'Escape') { cleanupPicker(); resolve(null); } };
+  const onKeyDown = (e) => { if (e.key === 'Escape') { cleanupPicker(); resolve(forceOnCancel ? (candidates[0] ?? null) : null); } };
 
   const cleanupPicker = () => {
     overlay.off('pointermove', onMove);

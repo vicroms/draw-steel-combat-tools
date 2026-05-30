@@ -1,4 +1,4 @@
-import { getSetting, getModuleApi, safeToggleStatusEffect, safeUpdate, getSquadGroup, MATERIAL_ICONS, safeCreateEmbedded, safeDelete } from '../helpers.mjs';
+import { getSetting, getModuleApi, safeToggleStatusEffect, safeUpdate, getSquadGroup, MATERIAL_ICONS, safeCreateEmbedded, safeDelete, tokenAt, toGrid, chooseFreeSquare } from '../helpers.mjs';
 import { setRaisedDeadVisible, addPreviewToken, removePreviewToken, activateTokenLayer, clearPreviewTokens } from './defeated-token-visibility.mjs';
 import { applySquadLabels } from '../squad-labels.mjs';
 
@@ -799,6 +799,49 @@ const _schedulePostReviveLabels = () => {
   }, 600);
 };
 
+const _resolveReviveSpaceConflicts = async (tokens) => {
+  const defeatedId = CONFIG.specialStatusEffects?.DEFEATED ?? 'dead';
+  const tokenSet   = new Set(tokens.map(t => t.id));
+
+  const trackedPos = new Map();
+  for (const t of tokens) {
+    if (canvas.tokens.get(t.id)) trackedPos.set(t.id, toGrid(t.document));
+  }
+
+  for (const t of tokens) {
+    if (!canvas.tokens.get(t.id)) continue;
+    const tg    = trackedPos.get(t.id);
+    if (!tg) continue;
+    const tSize = t.actor?.system?.combat?.size?.value ?? 1;
+
+    let blocker = null;
+    search: for (let dx = 0; dx < tSize && !blocker; dx++) {
+      for (let dy = 0; dy < tSize && !blocker; dy++) {
+        const cx = tg.x + dx, cy = tg.y + dy;
+        for (const [otherId, otherTg] of trackedPos) {
+          if (otherId === t.id) continue;
+          const other = canvas.tokens.get(otherId);
+          if (!other || other.actor?.statuses?.has(defeatedId)) continue;
+          const os = other.actor?.system?.combat?.size?.value ?? 1;
+          if (cx >= otherTg.x && cx < otherTg.x + os && cy >= otherTg.y && cy < otherTg.y + os) { blocker = other; break search; }
+        }
+        const c = tokenAt(cx, cy, t.id);
+        if (c && !tokenSet.has(c.id) && !c.actor?.statuses?.has(defeatedId)) { blocker = c; break search; }
+      }
+    }
+
+    if (!blocker) continue;
+    const bs = blocker.actor?.system?.combat?.size?.value ?? 1;
+    if (Math.abs(tSize - bs) >= 2) continue;
+
+    const chosen = await chooseFreeSquare(t, blocker, { forceOnCancel: true });
+    if (chosen) {
+      trackedPos.set(t.id, chosen);
+      await safeUpdate(t.document, { x: chosen.x * canvas.grid.size, y: chosen.y * canvas.grid.size });
+    }
+  }
+};
+
 const _doReviveV3 = async ({ tokenIds, skipGroupHpRestore = false }) => {
   const defeatedStatusId = CONFIG.specialStatusEffects?.DEFEATED ?? 'dead';
   const tokens = [...tokenIds]
@@ -930,7 +973,8 @@ const _doReviveV3 = async ({ tokenIds, skipGroupHpRestore = false }) => {
   }
   _tm('step 3 complete');
 
-  
+  await _resolveReviveSpaceConflicts(tokens);
+
   for (const t of tokens) {
     if (!canvas.tokens.get(t.id)) continue;
     const markerTileId = t.document.getFlag(M, 'deathMarkerTileId');
@@ -1227,6 +1271,7 @@ const _doReviveManual = async ({ tokenIds, label = 'DT Debug' }) => {
           }, ms));
         }
       }
+      await _resolveReviveSpaceConflicts(tokens);
       if (s4Lines.length === 1) {
         ui.notifications.info(game.i18n.format('DSCT.notice.dt.revived', { name: tokens[0].actor.name }));
       } else if (s4Lines.length > 1) {
