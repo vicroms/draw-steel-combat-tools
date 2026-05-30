@@ -1522,7 +1522,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             if (!noMoverDmg && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
             collisionMsgs.push(`<strong>Collision!</strong> ${targetToken.name} crashes into the corpse of ${blocker.name}${noMoverDmg || targetIsDead ? '.' : `. ${TakesStr(remaining + bonusCreatureDmg)}.`}`);
           } else {
-            undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
+            undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { isUndo: true } });
             if (!noMoverDmg && !targetIsDead) await applyDamage(targetToken.actor, remaining + bonusCreatureDmg);
             if (!noObstacleDmg) await applyDamage(blocker.actor, remaining + bonusCreatureDmg);
             const _vDmg  = remaining + bonusCreatureDmg;
@@ -1924,7 +1924,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
           await dmgTarget(dmg);
           const squadGroupsSnapshotted = new Set();
           for (const blocker of creatureBlockers) {
-            undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
+            undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { isUndo: true } });
             const blockerSquadGroup = getSquadGroup(blocker.actor);
             const sharedGroup = movedSquadGroup && blockerSquadGroup && movedSquadGroup.id === blockerSquadGroup.id ? movedSquadGroup : null;
             const prevSharedHP = sharedGroup?.system?.staminaValue ?? null;
@@ -2181,7 +2181,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
           }
         }
 
-        undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { animate: false, teleport: true } });
+        undoOps.push({ op: 'update', uuid: blocker.document.uuid, data: { x: blocker.document.x, y: blocker.document.y, elevation: blocker.document.elevation ?? 0 }, options: { isUndo: true } });
         const movedSquadGroup   = getSquadGroup(targetToken.actor);
         const blockerSquadGroup = getSquadGroup(blocker.actor);
         const sharedGroup       = movedSquadGroup && blockerSquadGroup &&

@@ -714,7 +714,7 @@ export const getWallBlockTop = (tile) => {
 
 export const safeTeleport = async (tokenDoc, targetX, targetY) => {
   canvas.tokens.releaseAll();
-  await safeUpdate(tokenDoc, { x: targetX, y: targetY }, { animate: false, teleport: true });
+  await safeUpdate(tokenDoc, { x: targetX, y: targetY }, { isUndo: true });
 };
 
 export const getTokenById = (id) =>

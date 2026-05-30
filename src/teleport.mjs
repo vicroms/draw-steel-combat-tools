@@ -235,7 +235,7 @@ const executeTeleport = async (token, distance, animate, colorHex, animDuration 
    const staminaSnap = (chosenGrid.willFall && actor) ? snapStamina(actor) : null;
 
    const arrivalElev = chosenGrid.willFall ? chosenGrid.arrivalElev : targetWorld.elevation;
-   await safeUpdate(token.document, { x: targetWorld.x, y: targetWorld.y, elevation: arrivalElev }, { animate: false, teleport: true });
+   await safeUpdate(token.document, { x: targetWorld.x, y: targetWorld.y, elevation: arrivalElev }, { isUndo: true });
 
    let fallDmg = 0, fallDist = 0, effectiveFall = 0, fallCancelled = false;
    if (chosenGrid.willFall) {
@@ -282,7 +282,7 @@ const executeTeleport = async (token, distance, animate, colorHex, animDuration 
    undoLog.push({
      op: 'update', uuid: token.document.uuid,
      data: { x: origWorld.x, y: origWorld.y, elevation: origWorld.elevation, alpha: origAlpha, 'texture.tint': origTint },
-     options: { animate: false, teleport: true }
+     options: { isUndo: true }
    });
 
    const grabbedTokenIds = new Set(removedGrabs.map(g => g.grabbedTokenId));
@@ -592,7 +592,7 @@ export const runBurstTeleport = async ({ sourceId, radius = 2, filter = 'all', e
         claimed.add(`${dest.x + ix},${dest.y + iy}`);
 
     const destWorld = toWorld(dest);
-    await safeUpdate(moving.document, { x: destWorld.x, y: destWorld.y }, { animate: false, teleport: true });
+    await safeUpdate(moving.document, { x: destWorld.x, y: destWorld.y }, { isUndo: true });
 
     if (getSetting('debugMode')) console.log(`DSCT | BurstTeleport | Moved ${moving.name} to grid (${dest.x},${dest.y})`);
   }
