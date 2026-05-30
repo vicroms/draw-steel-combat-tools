@@ -350,6 +350,7 @@ export class DeathTrackerSettingsMenu extends SettingsSubmenu {
       'overrideMinionDefeat',
       'autoAssignDamagedMinion',
       'pickDeathsEnabled',
+      'deathPickerDimAll',
       'deathAnimationDuration',
       'batchAnimationSafety',
       'deathMarkerEnabled',

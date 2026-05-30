@@ -191,6 +191,10 @@
         "name": "Pick Ambiguous Deaths",
         "hint": "When it's unclear which minions should die (more must die than took damage, fewer must die than took damage, or no damage was tracked at all), show a canvas picker so you can choose. When off, the system picks automatically."
       },
+      "deathPickerDimAll": {
+        "name": "Dim Highlight All Candidates",
+        "hint": "In the death picker, show a faint targeting reticle (50% opacity) and ghost X mark (10% opacity) on all valid candidates. Hovering a token brings its reticle to full brightness. Turn off if you prefer a cleaner canvas."
+      },
       "overrideMinionDefeat": {
         "name": "Alternative Minion Defeat UI",
         "hint": "Replace the Draw Steel system's minion defeat selection dialog with the Death Tracker's automated defeat processing."

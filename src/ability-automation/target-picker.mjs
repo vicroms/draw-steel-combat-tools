@@ -141,6 +141,22 @@ async function _runTargetPicker(ability, casterToken) {
 
   const drawHighlights = () => {
     canvas.interface.grid.clearHighlightLayer(hlName);
+    if (range != null && range > 0) {
+      const gs  = canvas.grid.size;
+      const cw  = Math.max(1, Math.round(casterToken.document.width));
+      const ch  = Math.max(1, Math.round(casterToken.document.height));
+      const cx0 = Math.floor(casterToken.x / gs);
+      const cy0 = Math.floor(casterToken.y / gs);
+      for (let rx = cx0 - range; rx <= cx0 + cw - 1 + range; rx++) {
+        for (let ry = cy0 - range; ry <= cy0 + ch - 1 + range; ry++) {
+          if (rx >= cx0 && rx < cx0 + cw && ry >= cy0 && ry < cy0 + ch) continue;
+          const dx = Math.max(0, cx0 - rx, rx - (cx0 + cw - 1));
+          const dy = Math.max(0, cy0 - ry, ry - (cy0 + ch - 1));
+          if (Math.max(dx, dy) > range) continue;
+          canvas.interface.grid.highlightPosition(hlName, { x: rx * gs, y: ry * gs, color: 0x002211, border: 0x00CC66 });
+        }
+      }
+    }
     for (const t of validTokens) {
       const sel   = selectedTokens.has(t.id);
       const ally  = isAllyToken(t);
@@ -171,6 +187,8 @@ async function _runTargetPicker(ability, casterToken) {
       game.i18n.format('DSCT.notice.targetPicker.instruction', { max: maxTargets, s: maxS }),
       { permanent: true },
     );
+
+    if (getSetting('deathPickerDimAll')) _syncReticles(validTokens, selectedTokens, null);
 
     const cleanup = () => {
       ui.notifications.remove(notif);
@@ -337,6 +355,10 @@ export async function runSourcePicker() {
       game.i18n.localize('DSCT.notice.picker.chooseSource'), { permanent: true },
     );
 
+    if (getSetting('deathPickerDimAll')) {
+      for (const c of candidates) _addPickerReticle(c, c._getBorderColor(), 0.5);
+    }
+
     const cleanup = () => {
       ui.notifications.remove(notif);
       canvas.interface.grid.destroyHighlightLayer(hlName);
@@ -354,8 +376,14 @@ export async function runSourcePicker() {
       const prevId = [...hoverIds][0] ?? null;
       if (newId === prevId) return;
       hoverIds.clear();
-      if (hit) { hoverIds.add(hit.id); _addPickerReticle(hit); }
-      if (prevId && prevId !== newId) _removePickerReticle(canvas.tokens.get(prevId));
+      if (hit) { hoverIds.add(hit.id); _addPickerReticle(hit, hit._getBorderColor(), 1.0); }
+      if (prevId && prevId !== newId) {
+        const prev = canvas.tokens.get(prevId);
+        if (prev) {
+          if (getSetting('deathPickerDimAll')) _addPickerReticle(prev, prev._getBorderColor(), 0.5);
+          else _removePickerReticle(prev);
+        }
+      }
       _drawTokenHighlights(hlName, candidates, new Set(), hoverIds);
     };
 
@@ -400,6 +428,10 @@ export async function runMultiTokenPicker({ candidates = null, hint = null, maxT
     const notif = ui.notifications.info(
       hint ?? game.i18n.localize('DSCT.notice.picker.chooseTargets'), { permanent: true },
     );
+
+    if (getSetting('deathPickerDimAll')) {
+      for (const t of tokens) _addPickerReticle(t, t._getBorderColor(), 0.5);
+    }
 
     const cleanup = () => {
       ui.notifications.remove(notif);
@@ -468,13 +500,13 @@ const _pickerReticles = new Map();
 let   _pickerTickerFn = null;
 let   _pickerTime     = 0;
 
-function _addPickerReticle(token, color) {
+function _addPickerReticle(token, color, alphaMult = 1) {
   color ??= token._getBorderColor();
   const existing = _pickerReticles.get(token.id);
-  if (existing) { existing.color = color; return; }
+  if (existing) { existing.color = color; existing.alphaMult = alphaMult; return; }
   const was = token.targeted.has(game.user);
   if (!was) token.targeted.add(game.user);
-  _pickerReticles.set(token.id, { token, color, was });
+  _pickerReticles.set(token.id, { token, color, alphaMult, was });
   if (!_pickerTickerFn) {
     _pickerTime     = 0;
     _pickerTickerFn = () => {
@@ -482,13 +514,13 @@ function _addPickerReticle(token, color) {
       const duration = 2000, pause = duration * 0.6, fade = (duration - pause) * 0.25;
       const t  = _pickerTime % duration;
       let   dt = Math.max(0, t - pause) / (duration - pause);
-      dt = CanvasAnimation.easeOutCircle(dt);
+      dt = Math.sqrt(1 - Math.pow(Math.min(dt, 1) - 1, 2));
       const m  = t < pause ? 0.5 : 0.5 + 0.5 * dt;
       const ta = Math.max(0, t - duration + fade);
       const a  = 1 - ta / fade;
       const bw = 2 * canvas.dimensions.uiScale;
       for (const [, e] of _pickerReticles)
-        e.token._drawTargetArrows({ margin: m, alpha: a, color: e.color, border: { width: bw } });
+        e.token._drawTargetArrows({ margin: m, alpha: a * (e.alphaMult ?? 1), color: e.color, border: { width: bw } });
     };
     canvas.app.ticker.add(_pickerTickerFn);
   }
@@ -522,9 +554,10 @@ function _clearPickerReticles() {
 
 function _syncReticles(tokens, selectedIds, hoveredId, colorFn = (t) => t._getBorderColor()) {
   for (const t of tokens) {
-    const show = selectedIds.has(t.id) || t.id === hoveredId;
-    if (show)  _addPickerReticle(t, colorFn(t));
-    else       _removePickerReticle(t);
+    const active = selectedIds.has(t.id) || t.id === hoveredId;
+    if (active) _addPickerReticle(t, colorFn(t), 1.0);
+    else if (getSetting('deathPickerDimAll')) _addPickerReticle(t, colorFn(t), 0.5);
+    else _removePickerReticle(t);
   }
 }
 

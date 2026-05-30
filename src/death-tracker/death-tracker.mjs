@@ -1267,6 +1267,29 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
   const xContainer = new PIXI.Container();
   canvas.controls.addChild(xContainer);
 
+  const dimXContainer = new PIXI.Container();
+  dimXContainer.alpha = 0.1;
+  canvas.controls.addChild(dimXContainer);
+
+  const _dpReticles = new Map();
+  let _dpHoveredId = null;
+
+  const _addDpReticle = (token, color, alphaMult = 1) => {
+    const existing = _dpReticles.get(token.id);
+    if (existing) { existing.color = color; existing.alphaMult = alphaMult; return; }
+    const was = token.targeted.has(game.user);
+    if (!was) token.targeted.add(game.user);
+    _dpReticles.set(token.id, { token, color, alphaMult, was });
+  };
+
+  const _clearDpReticles = () => {
+    for (const [, { token, was }] of _dpReticles) {
+      if (!was) { token.targeted.delete(game.user); token.targetArrows?.clear(); }
+      else token._drawTargetArrows?.();
+    }
+    _dpReticles.clear();
+  };
+
   let _dpT = 0;
   const _dpTicker = () => {
     _dpT += canvas.app.ticker.elapsedMS;
@@ -1275,6 +1298,18 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
     xContainer.alpha = cycle < pause
       ? 0.4
       : 0.4 + 0.15 * Math.sin(((cycle - pause) / (dur - pause)) * Math.PI);
+
+    if (_dpReticles.size > 0) {
+      const rFade = (dur - pause) * 0.25;
+      let dt = Math.max(0, cycle - pause) / (dur - pause);
+      dt = Math.sqrt(1 - Math.pow(Math.min(dt, 1) - 1, 2));
+      const m = cycle < pause ? 0.5 : 0.5 + 0.5 * dt;
+      const ta = Math.max(0, cycle - dur + rFade);
+      const a = 1 - ta / rFade;
+      const bw = 2 * canvas.dimensions.uiScale;
+      for (const [, e] of _dpReticles)
+        e.token._drawTargetArrows({ margin: m, alpha: a * e.alphaMult, color: e.color, border: { width: bw } });
+    }
   };
   canvas.app.ticker.add(_dpTicker);
 
@@ -1310,6 +1345,57 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
     }
   };
 
+  const drawDimXMarks = () => {
+    for (const child of dimXContainer.removeChildren()) child.destroy({ texture: true, baseTexture: true });
+    if (!getSetting('deathPickerDimAll')) return;
+    for (const squad of squads) {
+      for (const t of squad.pool) {
+        if (squad.selected.has(t.id) || squad.locked.has(t.id)) continue;
+        const tw  = Math.ceil(t.document.width  * canvas.grid.size);
+        const th  = Math.ceil(t.document.height * canvas.grid.size);
+        const pad = Math.max(6, tw * 0.08);
+        const lw  = Math.max(16, tw * 0.22);
+        const olw = Math.round(lw * 1.5);
+        const gfx = new PIXI.Graphics();
+        gfx.lineStyle(olw, 0x000000, 1);
+        gfx.moveTo(pad, pad); gfx.lineTo(tw - pad, th - pad);
+        gfx.moveTo(tw - pad, pad); gfx.lineTo(pad, th - pad);
+        gfx.lineStyle(lw, squad.color, 1);
+        gfx.moveTo(pad, pad); gfx.lineTo(tw - pad, th - pad);
+        gfx.moveTo(tw - pad, pad); gfx.lineTo(pad, th - pad);
+        const rt = PIXI.RenderTexture.create({ width: tw, height: th });
+        canvas.app.renderer.render(gfx, { renderTexture: rt, clear: true });
+        gfx.destroy();
+        const sprite = new PIXI.Sprite(rt);
+        sprite.x = t.x; sprite.y = t.y;
+        dimXContainer.addChild(sprite);
+      }
+    }
+  };
+
+  const onPointerMove = (event) => {
+    if (!getSetting('deathPickerDimAll')) return;
+    const pos = event.data.getLocalPosition(canvas.app.stage);
+    const allPool = squads.flatMap(s => s.pool);
+    const hit = allPool.find(t => {
+      const w = t.document.width * canvas.grid.size;
+      const h = t.document.height * canvas.grid.size;
+      return pos.x >= t.x && pos.x < t.x + w && pos.y >= t.y && pos.y < t.y + h;
+    });
+    const newId = hit?.id ?? null;
+    if (newId === _dpHoveredId) return;
+    if (_dpHoveredId) {
+      const prev = canvas.tokens.get(_dpHoveredId);
+      const prevSquad = squads.find(s => s.pool.some(t => t.id === _dpHoveredId));
+      if (prev && prevSquad) _addDpReticle(prev, prevSquad.color, 0.5);
+    }
+    _dpHoveredId = newId;
+    if (hit) {
+      const squad = squads.find(s => s.pool.some(t => t.id === hit.id));
+      if (squad) _addDpReticle(hit, squad.color, 1.0);
+    }
+  };
+
   const drawHighlights = () => {
     canvas.interface.grid.clearHighlightLayer(hlName);
     for (const squad of squads) {
@@ -1332,6 +1418,7 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
       }
     }
     drawXMarks();
+    drawDimXMarks();
   };
 
   let notif = null;
@@ -1350,9 +1437,13 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
     clearTimeout(_staleCheckTimer);
     ui.notifications.remove(notif);
     canvas.app.ticker.remove(_dpTicker);
+    canvas.stage.off('pointermove', onPointerMove);
+    _clearDpReticles();
     if (canvas.interface.grid.highlightLayers?.[hlName]) canvas.interface.grid.destroyHighlightLayer(hlName);
     xContainer.parent?.removeChild(xContainer);
     xContainer.destroy({ children: true });
+    dimXContainer.parent?.removeChild(dimXContainer);
+    dimXContainer.destroy({ children: true });
     canvas.stage.off('mousedown', onClick);
     document.removeEventListener('keydown', onKey);
     document.removeEventListener('contextmenu', onContextMenu);
@@ -1429,9 +1520,13 @@ export const _runManualModePicker = (contexts) => new Promise((resolve) => {
   };
 
   canvas.stage.on('mousedown', onClick);
+  canvas.stage.on('pointermove', onPointerMove);
   document.addEventListener('keydown', onKey);
   document.addEventListener('contextmenu', onContextMenu);
   drawHighlights();
+  if (getSetting('deathPickerDimAll')) {
+    for (const squad of squads) for (const t of squad.pool) _addDpReticle(t, squad.color, 0.5);
+  }
 
   
   
@@ -2540,6 +2635,28 @@ export const runPowerWordKillUI = async (options = {}) => {
   const hoverContainer = new PIXI.Container();
   canvas.controls.addChild(hoverContainer);
 
+  const dimXContainerPwk = new PIXI.Container();
+  dimXContainerPwk.alpha = 0.1;
+  canvas.controls.addChild(dimXContainerPwk);
+
+  const _pwkReticles = new Map();
+
+  const _addPwkReticle = (token, alphaMult = 1) => {
+    const existing = _pwkReticles.get(token.id);
+    if (existing) { existing.alphaMult = alphaMult; return; }
+    const was = token.targeted.has(game.user);
+    if (!was) token.targeted.add(game.user);
+    _pwkReticles.set(token.id, { token, alphaMult, was });
+  };
+
+  const _clearPwkReticles = () => {
+    for (const [, { token, was }] of _pwkReticles) {
+      if (!was) { token.targeted.delete(game.user); token.targetArrows?.clear(); }
+      else token._drawTargetArrows?.();
+    }
+    _pwkReticles.clear();
+  };
+
   let _pwkT = 0;
   const _pwkTicker = () => {
     _pwkT += canvas.app.ticker.elapsedMS;
@@ -2550,6 +2667,18 @@ export const runPowerWordKillUI = async (options = {}) => {
       : 0.4 + 0.15 * Math.sin(((_pwkCycle - _pwkPause) / (_pwkDur - _pwkPause)) * Math.PI);
     xContainer.alpha = _pwkAlpha;
     hoverContainer.alpha = _pwkAlpha * 0.45;
+
+    if (_pwkReticles.size > 0) {
+      const _pwkFade = (_pwkDur - _pwkPause) * 0.25;
+      let dt = Math.max(0, _pwkCycle - _pwkPause) / (_pwkDur - _pwkPause);
+      dt = Math.sqrt(1 - Math.pow(Math.min(dt, 1) - 1, 2));
+      const m = _pwkCycle < _pwkPause ? 0.5 : 0.5 + 0.5 * dt;
+      const ta = Math.max(0, _pwkCycle - _pwkDur + _pwkFade);
+      const a = 1 - ta / _pwkFade;
+      const bw = 2 * canvas.dimensions.uiScale;
+      for (const [, e] of _pwkReticles)
+        e.token._drawTargetArrows({ margin: m, alpha: a * e.alphaMult, color: e.token._getBorderColor(), border: { width: bw } });
+    }
   };
   canvas.app.ticker.add(_pwkTicker);
 
@@ -2568,6 +2697,8 @@ export const runPowerWordKillUI = async (options = {}) => {
       xContainer.destroy({ children: true });
       hoverContainer.parent?.removeChild(hoverContainer);
       hoverContainer.destroy({ children: true });
+      dimXContainerPwk.parent?.removeChild(dimXContainerPwk);
+      dimXContainerPwk.destroy({ children: true });
       canvas.interface.grid.destroyHighlightLayer(hlName);
 
       if (squadGroup) {
@@ -2652,6 +2783,15 @@ export const runPowerWordKillUI = async (options = {}) => {
     if (token) _drawXSprite(token, hoverContainer);
   };
 
+  const drawDimXPwk = () => {
+    for (const child of dimXContainerPwk.removeChildren()) child.destroy({ texture: true, baseTexture: true });
+    if (!getSetting('deathPickerDimAll')) return;
+    for (const npc of npcs) {
+      if (selectedTokens.has(npc.id)) continue;
+      _drawXSprite(npc, dimXContainerPwk);
+    }
+  };
+
   const drawHighlights = () => {
     canvas.interface.grid.clearHighlightLayer(hlName);
     for (const npc of npcs) {
@@ -2670,11 +2810,15 @@ export const runPowerWordKillUI = async (options = {}) => {
       }
     }
     drawXMarks();
+    drawDimXPwk();
     const hoveredToken = npcs.find(t => t.id === hoveredNpcId);
     drawHoverX(hoveredToken && !selectedTokens.has(hoveredToken.id) ? hoveredToken : null);
   };
 
   drawHighlights();
+  if (getSetting('deathPickerDimAll')) {
+    for (const npc of npcs) _addPwkReticle(npc, 0.5);
+  }
   const pwkNotif = ui.notifications.info(game.i18n.localize('DSCT.notice.dt.pwkInstruction'), { permanent: true });
   window._dsctPwkNotif = pwkNotif;
 
@@ -2683,12 +2827,15 @@ export const runPowerWordKillUI = async (options = {}) => {
     ui.notifications.remove(pwkNotif);
     window._dsctPwkNotif = null;
     canvas.app.ticker.remove(_pwkTicker);
+    _clearPwkReticles();
     canvas.interface.grid.destroyHighlightLayer(hlName);
     xContainer.parent?.removeChild(xContainer);
     xContainer.destroy({ children: true });
     window._dsctPwkXContainer = null;
     hoverContainer.parent?.removeChild(hoverContainer);
     hoverContainer.destroy({ children: true });
+    dimXContainerPwk.parent?.removeChild(dimXContainerPwk);
+    dimXContainerPwk.destroy({ children: true });
     canvas.stage.off('mousedown', onClick);
     canvas.stage.off('mousemove', onMove);
     document.removeEventListener('keydown', onKey);
@@ -2796,6 +2943,10 @@ export const runPowerWordKillUI = async (options = {}) => {
     });
     const newId = hit?.id ?? null;
     if (newId === hoveredNpcId) return;
+    if (getSetting('deathPickerDimAll')) {
+      if (hoveredNpcId) { const prev = canvas.tokens.get(hoveredNpcId); if (prev) _addPwkReticle(prev, 0.5); }
+      if (hit) _addPwkReticle(hit, 1.0);
+    }
     hoveredNpcId = newId;
     drawHighlights();
   };

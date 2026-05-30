@@ -261,6 +261,10 @@ export const registerSettings = () => {
     name: L('pickDeathsEnabled.name'), hint: L('pickDeathsEnabled.hint'),
     scope: 'client', config: false, type: Boolean, default: true,
   });
+  game.settings.register(M, 'deathPickerDimAll', {
+    name: L('deathPickerDimAll.name'), hint: L('deathPickerDimAll.hint'),
+    scope: 'client', config: false, type: Boolean, default: true,
+  });
   game.settings.register(M, 'overrideMinionDefeat', {
     name: L('overrideMinionDefeat.name'), hint: L('overrideMinionDefeat.hint'),
     scope: 'world', config: false, type: Boolean, default: true,
