@@ -452,7 +452,6 @@ export class AbilityAutomationSettingsMenu extends SettingsSubmenu {
       'neutralizeEnrichers',
       'autoConfirmSelection',
       'rollDialogPillUI',
-      'highGroundEnabled',
       'enforceAbilityRange',
       'gmBypassRangeEnforcement',
       'aidAttackAutomation',
@@ -637,6 +636,12 @@ export class CompatibilitySettingsMenu extends SettingsSubmenu {
 
     if (debugMode || isActive('ds-quick-strike')) keys.push('quickStrikeCompat');
 
+    if (debugMode || isActive('ds-terrain-designer')) {
+      keys.push(header('DS Terrain Designer'));
+      keys.push('highGroundEnabled');
+      keys.push(compatInfo('ds-terrain-designer', 'DSCT.compat.dsTerrain.name', 'DSCT.compat.dsTerrain.hint'));
+    }
+
     if (debugMode || isActive('draw-steel-target-damage')) {
       keys.push(header('Draw Steel: Target Damage'));
       keys.push('dstdQuickFmButton');
@@ -651,7 +656,6 @@ export class CompatibilitySettingsMenu extends SettingsSubmenu {
     }
 
     const autoEntries = [
-      compatInfo('ds-terrain-designer', 'DSCT.compat.dsTerrain.name',      'DSCT.compat.dsTerrain.hint'),
       compatInfo('tagger',              'DSCT.compat.tagger.name',          'DSCT.compat.tagger.hint'),
       compatInfo('wall-height',         'DSCT.compat.wallHeight.name',      'DSCT.compat.wallHeight.hint'),
       compatInfo('ds-token-override',   'DSCT.compat.dsTokenOverride.name', 'DSCT.compat.dsTokenOverride.hint'),

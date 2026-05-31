@@ -383,7 +383,7 @@
       },
       "highGroundEnabled": {
         "name": "High Ground Edge",
-        "hint": "Shows a High Ground edge pill in the roll dialog when the attacker is on higher elevation than the target. When DS Terrain Designer is active, the pill is informational only as DSTD already applies the edge. Without DSTD, DSCT applies the edge directly."
+        "hint": "Shows a High Ground edge pill in the roll dialog when the attacker is standing on terrain at a higher elevation than the target."
       },
       "enforceAbilityRange": {
         "name": "Enforce Ability Range",
