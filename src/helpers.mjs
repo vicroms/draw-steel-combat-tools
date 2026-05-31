@@ -459,7 +459,7 @@ export const applyFall = async (token, targetElev = 0, { silent = true, skipConf
       const blockerWouldDie = (landedOn.actor.system.stamina?.value ?? 1) <= 0;
       if (!fallerWouldDie || !blockerWouldDie) {
         const chosen = await chooseFreeSquare(token, landedOn);
-        if (chosen) await safeUpdate(token.document, { x: chosen.x * GRID(), y: chosen.y * GRID() });
+        if (chosen) await safeUpdate(token.document, { x: chosen.x * GRID(), y: chosen.y * GRID() }, { dsMovement: true });
       }
     }
   }

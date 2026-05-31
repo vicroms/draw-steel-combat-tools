@@ -312,7 +312,7 @@ const applyFallDamage = async (targetToken, finalElev, landingGrid, agility, can
           if (!blockerWouldDie) {
             const chosen = await chooseFreeSquare(targetToken, landedOn);
             if (chosen) {
-              await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID });
+              await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID }, { dsMovement: true });
               collisionMsgs.push(`${targetToken.name} lands in a nearby free space.`);
             } else {
               collisionMsgs.push(`${targetToken.name} could not find a free space to land.`);
@@ -364,7 +364,7 @@ const applyFallDamage = async (targetToken, finalElev, landingGrid, agility, can
         if (!fallerWouldDie || !blockerWouldDie) {
           const chosen = await chooseFreeSquare(targetToken, landedOn);
           if (chosen) {
-            await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID });
+            await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID }, { dsMovement: true });
             collisionMsgs.push(`${targetToken.name} lands in a nearby free space.`);
           } else {
             collisionMsgs.push(`${targetToken.name} could not find a free space to land.`);
@@ -445,7 +445,7 @@ const applyForcedFallDamage = async (targetToken, forcedDist, finalElev, landing
         if (!blockerWouldDie) {
           const chosen = await chooseFreeSquare(targetToken, landedOn);
           if (chosen) {
-            await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID });
+            await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID }, { dsMovement: true });
             collisionMsgs.push(`${targetToken.name} lands in a nearby free space.`);
           } else {
             collisionMsgs.push(`${targetToken.name} could not find a free space to land.`);
@@ -493,7 +493,7 @@ const applyForcedFallDamage = async (targetToken, forcedDist, finalElev, landing
       if (!fallerWouldDie || !blockerWouldDie) {
         const chosen = await chooseFreeSquare(targetToken, landedOn);
         if (chosen) {
-          await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID });
+          await safeUpdate(targetToken.document, { x: chosen.x * GRID, y: chosen.y * GRID }, { dsMovement: true });
           collisionMsgs.push(`${targetToken.name} lands in a nearby free space.`);
         } else {
           collisionMsgs.push(`${targetToken.name} could not find a free space to land.`);

@@ -84,6 +84,8 @@ export const applyMark = async ({ maxTargets = 1, override = false, dsid = 'othe
 
   const isMarkAbility = dsid === 'mark';
   for (const targetToken of targets) {
+    const existingMark = targetToken.actor.effects.find(e => e.flags?.[M]?.mark);
+    if (existingMark) await safeDelete(existingMark);
     const effectData = {
       name: 'Mark',
       img: getSetting('markedEffectIcon') || 'icons/skills/targeting/crosshair-pointed-orange.webp',

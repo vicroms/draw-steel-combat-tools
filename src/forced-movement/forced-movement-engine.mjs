@@ -2329,7 +2329,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             animTerrainElev = te;
           }
         }
-        await safeUpdate(targetToken.document, stepMoveData);
+        await safeUpdate(targetToken.document, stepMoveData, { dsMovement: true });
         await new Promise(r => setTimeout(r, getSetting('animationStepDelay')));
       }
     } finally {

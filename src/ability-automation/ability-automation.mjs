@@ -438,13 +438,13 @@ export const registerAbilityInjectors = () => {
       }
     }
 
-    if (getSetting('markAutomation') && !game.modules.get('draw-steel-target-damage')?.active) {
-      const config = MARK_ABILITY_CONFIG[dsid];
-      if (config) {
-        const speakerActor   = game.actors.get(msg.speaker?.actor);
-        const speakerAnticip = dsid === 'mark' && (speakerActor?.items.some(i => getItemDsid(i) === 'anticipation') ?? false);
-        const effectiveMax   = speakerAnticip ? Math.max(config.maxTargets, 2) : config.maxTargets;
+    if (getSetting('markAutomation') && MARK_ABILITY_CONFIG[dsid]) {
+      const config         = MARK_ABILITY_CONFIG[dsid];
+      const speakerActor   = game.actors.get(msg.speaker?.actor);
+      const speakerAnticip = dsid === 'mark' && (speakerActor?.items.some(i => getItemDsid(i) === 'anticipation') ?? false);
+      const effectiveMax   = speakerAnticip ? Math.max(config.maxTargets, 2) : config.maxTargets;
 
+      const injectNormalMarkBtn = () => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'dsct-mark-btn';
@@ -455,6 +455,23 @@ export const registerAbilityInjectors = () => {
           getModuleApi(false)?.mark({ ...config, dsid, sourceActorId: msg.speaker?.actor ?? null });
         });
         btnArea().appendChild(btn);
+      };
+
+      if (!game.modules.get('draw-steel-target-damage')?.active) {
+        injectNormalMarkBtn();
+      } else {
+        setTimeout(() => {
+          if (el.querySelector('.draw-steel-target-damage-target-row')) return;
+          injectNormalMarkBtn();
+          const obs = new MutationObserver(() => {
+            if (el.querySelector('.draw-steel-target-damage-target-row')) {
+              el.querySelector('.dsct-mark-btn')?.remove();
+              obs.disconnect();
+            }
+          });
+          obs.observe(el, { childList: true, subtree: true });
+          setTimeout(() => obs.disconnect(), 3000);
+        }, 0);
       }
     }
 
