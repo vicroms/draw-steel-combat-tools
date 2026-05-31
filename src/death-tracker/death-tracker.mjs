@@ -1606,18 +1606,14 @@ const _flushManualKillAccumulator = async () => {
     if (a.pickerContexts.length > 0) {
       const contexts = a.pickerContexts.map((ctx, i) => ({ ...ctx, color: _SQUAD_COLORS[i % _SQUAD_COLORS.length] }));
       
-      const storedUserId  = window._lastSquadDamageUserId;
-      const storedUser    = storedUserId ? game.users.get(storedUserId) : null;
-      const pickerUserId  = (storedUser && !storedUser.isGM && storedUser.active)
-        ? storedUserId
-        : resolveBreakpointUser();
+      const pickerUserId  = resolvePickerUserId();
       let picked;
       if (pickerUserId === game.user.id) {
         picked = await _runManualModePicker(contexts);
       } else {
         const socket = getModuleApi(false)?.socket;
         if (!socket) {
-          
+
           picked = await _runManualModePicker(contexts);
         } else {
           const requestId = foundry.utils.randomID();
@@ -1655,11 +1651,7 @@ const _flushManualKillAccumulator = async () => {
     
     if (getSetting('pickDeathsEnabled') && a.pickerContexts.length > 0) {
       const contexts     = a.pickerContexts.map((ctx, i) => ({ ...ctx, color: _SQUAD_COLORS[i % _SQUAD_COLORS.length] }));
-      const storedUserId = window._lastSquadDamageUserId;
-      const storedUser   = storedUserId ? game.users.get(storedUserId) : null;
-      const pickerUserId = (storedUser && !storedUser.isGM && storedUser.active)
-        ? storedUserId
-        : resolveBreakpointUser();
+      const pickerUserId = resolvePickerUserId();
       let picked;
       if (pickerUserId === game.user.id) {
         picked = await _runManualModePicker(contexts);
@@ -2395,6 +2387,20 @@ const resolveBreakpointUser = () => {
     if (author && !author.isGM && author.active) return author.id;
   }
   return game.users.activeGM?.id ?? game.user.id;
+};
+
+const resolvePickerUserId = () => {
+  if (getSetting('gmControlsAllDeathPickers')) return game.users.activeGM?.id ?? game.user.id;
+  const storedUserId = window._lastSquadDamageUserId;
+  const storedUser   = storedUserId ? game.users.get(storedUserId) : null;
+  const userId = (storedUser && !storedUser.isGM && storedUser.active)
+    ? storedUserId
+    : resolveBreakpointUser();
+  const user = game.users.get(userId);
+  if (user && !user.isGM && user.getFlag(M, 'cedeDeathPickerToGM')) {
+    return game.users.activeGM?.id ?? game.user.id;
+  }
+  return userId;
 };
 
 export const runRaiseDeadUI = () => {

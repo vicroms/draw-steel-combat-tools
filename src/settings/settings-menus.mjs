@@ -352,6 +352,8 @@ export class DeathTrackerSettingsMenu extends SettingsSubmenu {
       'autoAssignDamagedMinion',
       'pickDeathsEnabled',
       'deathPickerDimAll',
+      'gmControlsAllDeathPickers',
+      'cedeDeathPickerToGM',
       'deathAnimationDuration',
       'batchAnimationSafety',
       'deathMarkerEnabled',
@@ -367,6 +369,8 @@ export class DeathTrackerSettingsMenu extends SettingsSubmenu {
   }
 
   _buildEntry(key) {
+    if (key === 'cedeDeathPickerToGM' && game.user.isGM) return null;
+    if (key === 'cedeDeathPickerToGM' && getSetting('gmControlsAllDeathPickers')) return null;
     const entry = super._buildEntry(key);
     if (entry && key === 'deathMarkerIcon') entry.isFilePicker = true;
     return entry;
@@ -692,7 +696,7 @@ export class SquadLabelsSettingsMenu extends SettingsSubmenu {
   static get enableKey()   { return 'autoSquadLabelsEnabled'; }
 
   static get regularKeys() {
-    return ['autoSquadLabelsEnabled', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadHudEnabled', 'squadHudPlayerVisibility'];
+    return ['autoSquadLabelsEnabled', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadSimultaneousTurns', 'squadHudEnabled', 'squadHudPlayerVisibility'];
   }
 
   static get debugKeys() { return ['stickbugMode', 'stickbugChatTrigger']; }

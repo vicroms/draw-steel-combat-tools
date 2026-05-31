@@ -259,11 +259,20 @@ export const registerSettings = () => {
   });
   game.settings.register(M, 'pickDeathsEnabled', {
     name: L('pickDeathsEnabled.name'), hint: L('pickDeathsEnabled.hint'),
-    scope: 'client', config: false, type: Boolean, default: true,
+    scope: 'world', config: false, type: Boolean, default: true,
   });
   game.settings.register(M, 'deathPickerDimAll', {
     name: L('deathPickerDimAll.name'), hint: L('deathPickerDimAll.hint'),
     scope: 'client', config: false, type: Boolean, default: true,
+  });
+  game.settings.register(M, 'gmControlsAllDeathPickers', {
+    name: L('gmControlsAllDeathPickers.name'), hint: L('gmControlsAllDeathPickers.hint'),
+    scope: 'world', config: false, type: Boolean, default: false,
+  });
+  game.settings.register(M, 'cedeDeathPickerToGM', {
+    name: L('cedeDeathPickerToGM.name'), hint: L('cedeDeathPickerToGM.hint'),
+    scope: 'client', config: false, type: Boolean, default: false,
+    onChange: (v) => { if (!game.user?.isGM) game.user?.setFlag(M, 'cedeDeathPickerToGM', v); },
   });
   game.settings.register(M, 'overrideMinionDefeat', {
     name: L('overrideMinionDefeat.name'), hint: L('overrideMinionDefeat.hint'),
@@ -319,6 +328,10 @@ export const registerSettings = () => {
   game.settings.register(M, 'squadCaptainShortcut', {
     name: L('squadCaptainShortcut.name'), hint: L('squadCaptainShortcut.hint'),
     scope: 'world', config: false, type: Boolean, default: false,
+  });
+  game.settings.register(M, 'squadSimultaneousTurns', {
+    name: L('squadSimultaneousTurns.name'), hint: L('squadSimultaneousTurns.hint'),
+    scope: 'world', config: false, type: Boolean, default: true,
   });
   game.settings.register(M, 'squadHudEnabled', {
     name: L('squadHudEnabled.name'), hint: L('squadHudEnabled.hint'),

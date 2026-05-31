@@ -189,11 +189,19 @@
       },
       "pickDeathsEnabled": {
         "name": "Pick Ambiguous Deaths",
-        "hint": "When it's unclear which minions should die (more must die than took damage, fewer must die than took damage, or no damage was tracked at all), show a canvas picker so you can choose. When off, the system picks automatically."
+        "hint": "Director only. Shows a canvas picker when it is unclear which minions should die (more or fewer must die than took damage, or no damage was tracked at all). When off, the system picks automatically."
       },
       "deathPickerDimAll": {
         "name": "Dim Highlight All Candidates",
         "hint": "In the death picker, show a faint targeting reticle (50% opacity) and ghost X mark (10% opacity) on all valid candidates. Hovering a token brings its reticle to full brightness. Turn off if you prefer a cleaner canvas."
+      },
+      "gmControlsAllDeathPickers": {
+        "name": "Director Controls All Death Picks",
+        "hint": "Forces the death picker to always open for the Director, regardless of which player triggered the damage. Hides the per-player cede option."
+      },
+      "cedeDeathPickerToGM": {
+        "name": "Let Director Pick Deaths",
+        "hint": "When on, the Director receives your death picker instead of you. Useful if you prefer not to manage death picks during play."
       },
       "overrideMinionDefeat": {
         "name": "Alternative Minion Defeat UI",
