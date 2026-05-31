@@ -545,7 +545,30 @@ async function _injectFmButtons(message, root) {
   const doJudgement = getSetting('judgementAutomation') && dsid === 'judgement';
 
   const tier = _getMessageTier(message);
-  if (!tier && !doMark && !doJudgement) return;
+
+  const descEnrichers = window._dsctEnricherCache?.get(message.id) ?? (() => {
+    const result = [];
+    const desc   = ability.system?.description?.value ?? '';
+    const re     = /\[\[\/apply(?<config>[^\]]*?)?\]\](?!\])(?:\{(?<label>[^}]+)\})?/gi;
+    const seen   = new Set();
+    for (const match of desc.matchAll(re)) {
+      const config = (match.groups?.config ?? '').trim();
+      const label  = match.groups?.label ?? null;
+      let statusId = null, endStr = null;
+      for (const val of config.split(/\s+/).filter(Boolean)) {
+        const lower = val.toLowerCase();
+        if (ds?.CONFIG?.effectEnds?.[lower]) { endStr = lower; continue; }
+        if (ds?.CONFIG?.conditions?.[lower]) { statusId = lower; continue; }
+      }
+      if (!statusId || seen.has(statusId)) continue;
+      seen.add(statusId);
+      const displayLabel = label ?? game.i18n.localize(ds?.CONFIG?.conditions?.[statusId]?.name ?? statusId);
+      result.push({ statusId, endStr, label: displayLabel });
+    }
+    return result;
+  })();
+
+  if (!tier && !doMark && !doJudgement && !descEnrichers.length) return;
 
   const fmEffects = tier ? Array.from(ability.system?.power?.effects ?? [])
     .filter(e => e.forced && typeof e.forced === 'object') : [];
@@ -568,7 +591,7 @@ async function _injectFmButtons(message, root) {
     (getSetting('grabEnabled') || getSetting('frightenedEnabled') || getSetting('tauntedEnabled'));
   const doPf         = holyRolls.length > 0;
   if (getSetting('debugMode')) console.log(`DSCT | _injectFmButtons fmEffects=${fmEffects.length} appliedEffects=${appliedEffects.length} tier=${tier} doFm=${doFm} doConditions=${doConditions} doMark=${doMark} doJudgement=${doJudgement} doPf=${doPf}`);
-  if (!doFm && !doConditions && !doPf && !doMark && !doJudgement) return;
+  if (!doFm && !doConditions && !doPf && !doMark && !doJudgement && !descEnrichers.length) return;
 
   const savedFlagState = message.getFlag(M, 'dstdFmState') ?? {};
 
@@ -1085,7 +1108,85 @@ async function _injectFmButtons(message, root) {
     }
 
     
-    if (body.querySelector('[data-dsct-dstd-cond], [data-dsct-fm-key], [data-dsct-mark-key], [data-dsct-judge-key]')) {
+    for (const { statusId, endStr, label: enrichLabel } of descEnrichers) {
+      const enrichKey = `${targetKey}:enrich:${statusId}`;
+      if (actions.querySelector(`[data-dsct-enrich-key="${enrichKey}"]`)) continue;
+      if (actions.querySelector(`[data-dsct-dstd-cond*=":cond:${statusId}"]`)) continue;
+
+      const targetDocE   = tokenUuid ? await fromUuid(tokenUuid).catch(() => null) : null;
+      const targetActorE = targetDocE?.object?.actor ?? targetDocE?.actor ?? null;
+      const isApplied    = statusId === 'taunted'
+        ? !!targetActorE?.appliedEffects?.some(e => e.getFlag(M, 'taunted'))
+        : statusId === 'frightened'
+          ? !!targetActorE?.appliedEffects?.some(e => e.getFlag(M, 'frightened'))
+          : !!targetActorE?.statuses?.has(statusId);
+
+      const applyLbl   = `Apply ${enrichLabel}`;
+      const appliedLbl = `Applied: ${enrichLabel}`;
+
+      const enrichBtn = document.createElement('button');
+      enrichBtn.type = 'button';
+      enrichBtn.classList.add(`${DSTD}-action-button`, `${DSTD}-stretch-button`);
+      enrichBtn.dataset.dsctEnrichKey = enrichKey;
+      enrichBtn.dataset.tooltip = isApplied ? appliedLbl : applyLbl;
+      enrichBtn.disabled = isApplied;
+      const enrichSpan = document.createElement('span');
+      enrichSpan.textContent = isApplied ? appliedLbl : applyLbl;
+      enrichBtn.append(_makeIcon('fa-solid fa-person-rays'), enrichSpan);
+
+      const undoEnrichBtn = document.createElement('button');
+      undoEnrichBtn.type = 'button';
+      undoEnrichBtn.classList.add(`${DSTD}-icon-button`, `${DSTD}-undo-button`);
+      undoEnrichBtn.dataset.tooltip = `Undo ${enrichLabel}`;
+      undoEnrichBtn.disabled = !isApplied;
+      undoEnrichBtn.append(_makeIcon('fa-solid fa-rotate-left'));
+
+      enrichBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); e.preventDefault();
+        let targetToken = null;
+        if (tokenUuid) {
+          const d = await fromUuid(tokenUuid).catch(() => null);
+          targetToken = d?.object ?? null;
+        }
+        if (!targetToken) { ui.notifications.warn('DSCT | Target token not found on canvas'); return; }
+        if (statusId === 'taunted' && sourceActor)         await applyTaunted(targetToken, sourceActor, sourceToken?.id ?? null, endStr);
+        else if (statusId === 'frightened' && sourceActor) await applyFrightened(targetToken, sourceActor, sourceToken?.id ?? null, endStr);
+        else {
+          const tmp = await CONFIG.ActiveEffect.documentClass.fromStatusEffect(statusId).catch(() => null);
+          if (tmp) {
+            const data = foundry.utils.mergeObject(tmp.toObject(), { transfer: true });
+            if (endStr && ds?.CONFIG?.effectEnds?.[endStr]) data.duration = { expiry: ds.CONFIG.effectEnds[endStr].expiryEvent };
+            if (targetToken.actor) await targetToken.actor.createEmbeddedDocuments('ActiveEffect', [data]);
+          }
+        }
+        enrichBtn.disabled        = true;
+        undoEnrichBtn.disabled    = false;
+        enrichSpan.textContent    = appliedLbl;
+        enrichBtn.dataset.tooltip = appliedLbl;
+      });
+
+      undoEnrichBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); e.preventDefault();
+        const d     = tokenUuid ? await fromUuid(tokenUuid).catch(() => null) : null;
+        const actor = d?.object?.actor ?? d?.actor ?? null;
+        if (actor) {
+          for (const ef of [...(actor.appliedEffects ?? actor.effects)]) {
+            if (ef.getFlag(M, statusId) || ef.statuses?.has(statusId)) await safeDelete(ef);
+          }
+        }
+        enrichBtn.disabled        = false;
+        undoEnrichBtn.disabled    = true;
+        enrichSpan.textContent    = applyLbl;
+        enrichBtn.dataset.tooltip = applyLbl;
+      });
+
+      const enrichRow = document.createElement('div');
+      enrichRow.className = `${DSTD}-action-row dsct-dstd-condition-row`;
+      enrichRow.append(enrichBtn, undoEnrichBtn);
+      actions.appendChild(enrichRow);
+    }
+
+    if (body.querySelector('[data-dsct-dstd-cond], [data-dsct-fm-key], [data-dsct-mark-key], [data-dsct-enrich-key], [data-dsct-judge-key]')) {
       const muted = body.querySelector(`.${DSTD}-muted`);
       if (muted) muted.hidden = true;
     }
