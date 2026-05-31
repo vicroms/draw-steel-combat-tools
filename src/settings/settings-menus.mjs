@@ -444,6 +444,7 @@ export class AbilityAutomationSettingsMenu extends SettingsSubmenu {
     return [
       'abilityAutomationEnabled',
       header('General'),
+      'neutralizeEnrichers',
       'autoConfirmSelection',
       'rollDialogPillUI',
       'highGroundEnabled',

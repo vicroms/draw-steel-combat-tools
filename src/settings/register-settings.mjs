@@ -447,6 +447,10 @@ export const registerSettings = () => {
     name: L('purifyingFireEnabled.name'), hint: L('purifyingFireEnabled.hint'),
     scope: 'world', config: false, type: Boolean, default: true,
   });
+  game.settings.register(M, 'neutralizeEnrichers', {
+    name: L('neutralizeEnrichers.name'), hint: L('neutralizeEnrichers.hint'),
+    scope: 'world', config: false, type: Boolean, default: true,
+  });
   game.settings.register(M, 'autoConfirmSelection', {
     name: L('autoConfirmSelection.name'), hint: L('autoConfirmSelection.hint'),
     scope: 'world', config: false, type: Boolean, default: true,

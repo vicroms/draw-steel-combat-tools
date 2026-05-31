@@ -546,7 +546,7 @@ async function _injectFmButtons(message, root) {
 
   const tier = _getMessageTier(message);
 
-  const descEnrichers = window._dsctEnricherCache?.get(message.id) ?? (() => {
+  const descEnrichers = !getSetting('neutralizeEnrichers') ? [] : (window._dsctEnricherCache?.get(message.id) ?? (() => {
     const result = [];
     const desc   = ability.system?.description?.value ?? '';
     const re     = /\[\[\/apply(?<config>[^\]]*?)?\]\](?!\])(?:\{(?<label>[^}]+)\})?/gi;
@@ -566,7 +566,7 @@ async function _injectFmButtons(message, root) {
       result.push({ statusId, endStr, label: displayLabel });
     }
     return result;
-  })();
+  })());
 
   if (!tier && !doMark && !doJudgement && !descEnrichers.length) return;
 

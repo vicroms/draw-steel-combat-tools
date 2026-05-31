@@ -357,6 +357,10 @@
         "name": "Purifying Fire",
         "hint": "Adds an Apply Fire Damage button alongside holy damage buttons when the acting hero has the Purifying Fire ability, so they can deal fire damage instead and trigger the target's fire weakness."
       },
+      "neutralizeEnrichers": {
+        "name": "Neutralize Ability Enrichers",
+        "hint": "Replaces clickable [[/apply]] buttons in ability chat messages with plain text and injects DSCT-handled apply buttons instead. Disable if you prefer the DS system's default enricher behavior."
+      },
       "autoConfirmSelection": {
         "name": "Auto-Confirm Target Selection",
         "hint": "When the required number of targets are selected in a target picker (ability targeting, Power Word: Kill, Raise Dead), automatically confirm without needing to press Enter."

@@ -476,7 +476,7 @@ export const registerAbilityInjectors = () => {
 
     }
 
-    if (dsid) {
+    if (dsid && getSetting('neutralizeEnrichers')) {
       const hasDstd  = !!game.modules.get('draw-steel-target-damage')?.active;
       const srcTknId = msg.speaker?.token ?? null;
       const actor    = msg.speaker?.actor ? game.actors.get(msg.speaker.actor) : null;
