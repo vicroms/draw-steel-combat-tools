@@ -544,6 +544,7 @@
         "executeTeleport": "Execute Teleport",
         "noTarget": "Target exactly 1 token",
         "shiftHint": "Hold Shift to teleport the targeted token instead",
+        "enricherHint": "Apply to selected token. Hold Shift to apply to targeted token.",
         "pickSource": "Pick Token"
       },
       "wb": {

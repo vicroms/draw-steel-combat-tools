@@ -637,6 +637,75 @@ export const runBurstTeleport = async ({ sourceId, radius = 2, filter = 'all', e
 };
 
 export const registerTeleportHooks = () => {
+  CONFIG.TextEditor.enrichers.push({
+    id:      'dsct.teleport',
+    pattern: /\[\[\/teleport(?<args>[^\]]*?)?\]\](?:\{(?<label>[^}]+)\})?/gi,
+    onRender: (element) => {
+      const a = element.querySelector('a.roll-link');
+      if (!a) return;
+      a.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const saved  = game.user.getFlag('draw-steel-combat-tools', 'tpSettings') ?? { dist: 5, anim: true, color: '#a030ff', duration: 600 };
+        const fDist  = parseInt(a.dataset.dist)     || saved.dist;
+        const fAnim  = a.dataset.animate  !== undefined ? a.dataset.animate === 'true' : (saved.anim     ?? true);
+        const fColor = a.dataset.color    ?? saved.color   ?? '#a030ff';
+        const fDur   = a.dataset.duration !== undefined ? (parseInt(a.dataset.duration) || 600) : (saved.duration ?? 600);
+        const fSrcId = a.dataset.sourceId;
+
+        let token;
+        if (fSrcId) {
+          token = getTokenById(fSrcId);
+          if (!token) { ui.notifications.warn(game.i18n.localize('DSCT.notice.tp.sourceNotFound')); return; }
+        } else if (e.shiftKey) {
+          const targets = [...game.user.targets];
+          if (targets.length !== 1) { ui.notifications.warn(game.i18n.localize('DSCT.notice.tp.noShiftTarget')); return; }
+          token = targets[0];
+        } else {
+          const controlled = canvas.tokens.controlled;
+          if (controlled.length !== 1) { ui.notifications.warn(game.i18n.localize('DSCT.notice.tp.mustSelectOne')); return; }
+          token = controlled[0];
+        }
+
+        await executeTeleport(token, fDist, fAnim, fColor, fDur);
+      });
+    },
+    enricher: async (match) => {
+      const raw = (match.groups?.args ?? '').trim().split(/\s+/).filter(Boolean);
+
+      let dist = null, animate = undefined, colorHex = undefined, duration = undefined, sourceId = undefined;
+      for (const val of raw) {
+        if (val === 'true' || val === 'false') { animate = val === 'true'; continue; }
+        if (val.startsWith('#'))               { colorHex = val;           continue; }
+        const num = parseInt(val);
+        if (!isNaN(num)) { if (dist === null) { dist = num; } else { duration = num; } continue; }
+        sourceId = val;
+      }
+
+      if (!dist) {
+        const span = document.createElement('span');
+        span.textContent = match[0];
+        return span;
+      }
+
+      const tokenDoc  = sourceId ? (canvas.scene?.tokens.get(sourceId) ?? null) : null;
+      const fixedName = tokenDoc?.name ?? null;
+
+      const a = document.createElement('a');
+      a.className = 'roll-link';
+      a.dataset.dist = dist;
+      if (animate  !== undefined) a.dataset.animate   = String(animate);
+      if (colorHex !== undefined) a.dataset.color     = colorHex;
+      if (duration !== undefined) a.dataset.duration  = duration;
+      if (sourceId !== undefined) a.dataset.sourceId  = sourceId;
+
+      const customLabel = match.groups?.label?.trim() ?? null;
+      a.innerHTML = `<i class="fa-solid fa-person-through-window"></i> ${customLabel ?? `Teleport ${fixedName ? `${fixedName} ` : ''}${dist} square${dist !== 1 ? 's' : ''}`}`;
+      if (!fixedName) a.title = game.i18n.localize('DSCT.panel.tp.enricherHint');
+
+      return a;
+    },
+  });
+
   Hooks.on('renderChatMessageHTML', (msg, el) => {
     if (!msg.getFlag('draw-steel-combat-tools', 'isTpUndo')) return;
 

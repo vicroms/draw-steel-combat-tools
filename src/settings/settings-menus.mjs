@@ -228,6 +228,7 @@ export class ConditionsSettingsMenu extends SettingsSubmenu {
       'conditionsEnabled',
       'appliedEffectEnabled',
       'applyDamageEnabled',
+      'neutralizeEnrichers',
       header('Frightened'),
       'frightenedEnabled',
       'frightenedEffectIcon',

@@ -375,6 +375,16 @@
   color: var(--dsct-text-dim);
 }
 
+enriched-content[enricher="dsct.teleport"] {
+  background: var(--content-link-background);
+  border: 1px solid var(--content-link-border-color);
+  border-radius: 2px;
+  color: var(--content-link-text-color);
+  padding: 1px 4px 0;
+  text-wrap-mode: nowrap;
+  cursor: pointer;
+}
+
 .dsct-tp-anim-options {
   display: flex;
   flex-direction: column;
