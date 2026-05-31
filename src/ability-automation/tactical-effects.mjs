@@ -213,8 +213,9 @@ export const applyAidAttack = async () => {
   rollHookId = Hooks.on('createChatMessage', async (message) => {
     if (!message.rolls?.length) return;
     if (message.rolls[0].options?.type !== 'test') return;
-    const allTargets = game.users.contents.flatMap(u => [...u.targets]);
-    if (!allTargets.some(t => t.id === targetTokenId)) return;
+    const roller = message.author;
+    const rollerTargets = roller ? [...roller.targets] : [];
+    if (!rollerTargets.some(t => t.id === targetTokenId)) return;
     await cleanup(`${message.speaker.alias} rolled against ${targetActor.name}`);
   });
 
