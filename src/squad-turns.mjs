@@ -110,14 +110,15 @@ export function registerSquadTurnHooks() {
     const combat = group.parent;
     if (!combat) return;
 
-    const members  = [...group.members];
-    const minInit  = Math.min(...members.map(m => m.initiative));
-    const primary  = members.find(m => m.initiative === minInit);
-    if (getSetting('debugMode')) console.log(`DSCT | squad batch activate (group): ${group.name}, primary=${primary?.name}`);
+    if (getSetting('debugMode')) {
+      const members = [...group.members];
+      const memberInits = members.map(m => `${m.name}(${m.initiative})`).join(', ');
+      console.log(`DSCT | squad batch activate (group): ${group.name}, groupInit=${changes.initiative}(was ${oldInit}), members=[${memberInits}]`);
+    }
 
     _squadBatchInProgress = true;
     try {
-      await activateSquadMembers(group, combat, primary);
+      await activateSquadMembers(group, combat, null);
 
       for (const sibGroup of findSiblingGroups(combat, group)) {
         if (!(sibGroup.initiative > 0)) continue;
@@ -179,7 +180,6 @@ export function registerSquadTurnHooks() {
     if (prevGroup && cur?.group?.id !== prev?.group?.id) {
       refreshSquadMarkers(prevGroup, null);
       for (const sibling of prevGroup.members) {
-        if (sibling === prev) continue; 
         await fireEndTurn(sibling, combat, previous.round);
       }
     }
