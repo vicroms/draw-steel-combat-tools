@@ -20,15 +20,22 @@ const GROUP_TINTS = {
 export const autoRenameGroups = async () => {
   if (!game.combat) return;
 
-  let groupNum = 1;
   const groups = game.combat.groups?.contents ?? [];
+  const takenNums = new Set();
+  const toRename = [];
 
   for (const group of groups) {
     const combatants = [...group.members];
     if (!combatants.length) continue;
-
     if (combatants.some(c => c.actor?.type === 'hero')) continue;
+    const fractional = group.name.match(/^Group (\d+)[A-Za-z]+\s*$/i);
+    if (fractional) { takenNums.add(parseInt(fractional[1])); continue; }
+    toRename.push(group);
+  }
 
+  let groupNum = 1;
+  for (const group of toRename) {
+    while (takenNums.has(groupNum)) groupNum++;
     await group.update({ name: `Group ${groupNum}` });
     groupNum++;
   }
@@ -144,13 +151,15 @@ const _findCaptainCandidates = (group, combat) => {
     for (const l of (m.actor?.system?.biography?.languages ?? [])) minionLangs.add(l);
   }
 
-  const isMount = filter.keyword('mount');
+  const isMount  = filter.keyword('mount');
+  const isLeader = filter.organization('leader');
+  const isSolo   = filter.organization('solo');
 
   return canvas.tokens.placeables.filter(t => {
     const a = t.actor;
     if (!a || a.type !== 'npc') return false;
     if (a.system.isMinion) return false;
-    if (isMount(a)) return false;
+    if (isMount(a) || isLeader(a) || isSolo(a)) return false;
     const c = combat.combatants.find(cb => cb.tokenId === t.id);
     if (!c || c.defeated) return false;
     
@@ -349,23 +358,46 @@ export const registerSquadLabelHooks = () => {
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const result = await foundry.applications.api.DialogV2.wait({
-      window: { title: game.i18n.localize('DSCT.dialog.autoRenameSquads.title') },
-      content: "<p>Do you want to rename all NPC combat groups to <strong>Group 1</strong>, <strong>Group 2</strong>, etc. before applying the labels?</p>",
-      buttons: [
-        { action: "rename", label: "Rename & Apply", icon: "fas fa-check", default: true },
-        { action: "apply",  label: "Just Apply Labels", icon: "fas fa-paint-brush" },
-      ],
-      rejectClose: false,
-    });
+    const preference = getSetting('squadLabelRenamePreference');
 
-    if (result === "rename") {
+    if (preference === 'rename') {
       await autoRenameGroups();
       await applySquadLabels();
       ui.notifications.info(game.i18n.localize('DSCT.notice.squads.renamedAndLabeled'));
-    } else if (result === "apply") {
+    } else if (preference === 'apply') {
       await applySquadLabels();
       ui.notifications.info(game.i18n.localize('DSCT.notice.squads.labelsAppliedExisting'));
+    } else {
+      let remember = false;
+      const result = await foundry.applications.api.DialogV2.wait({
+        window: { title: game.i18n.localize('DSCT.dialog.autoRenameSquads.title') },
+        content: `<p>${game.i18n.localize('DSCT.dialog.autoRenameSquads.content')}</p>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+            <input type="checkbox" id="dsct-remember-rename">
+            ${game.i18n.localize('DSCT.dialog.autoRenameSquads.remember')}
+          </label>`,
+        buttons: [
+          { action: "rename", label: game.i18n.localize('DSCT.dialog.autoRenameSquads.rename'), icon: "fas fa-check", default: true },
+          { action: "apply",  label: game.i18n.localize('DSCT.dialog.autoRenameSquads.apply'),  icon: "fas fa-paint-brush" },
+        ],
+        render: (_event, dialog) => {
+          dialog.element?.querySelector('#dsct-remember-rename')?.addEventListener('change', e => {
+            remember = e.target.checked;
+          });
+        },
+        rejectClose: false,
+      });
+
+      if (result === "rename") {
+        if (remember) await game.settings.set(M, 'squadLabelRenamePreference', 'rename');
+        await autoRenameGroups();
+        await applySquadLabels();
+        ui.notifications.info(game.i18n.localize('DSCT.notice.squads.renamedAndLabeled'));
+      } else if (result === "apply") {
+        if (remember) await game.settings.set(M, 'squadLabelRenamePreference', 'apply');
+        await applySquadLabels();
+        ui.notifications.info(game.i18n.localize('DSCT.notice.squads.labelsAppliedExisting'));
+      }
     }
 
     if (getSetting('squadLabelCaptainNow')) {
