@@ -1,4 +1,4 @@
-import { getSetting, safeCreateEmbedded, safeDelete, canForcedMoveTarget, getTokenById, getWindowById, getItemDsid, footprintDistFromBounds, tokFootprintDist, getItemRange } from '../helpers.mjs';
+import { getSetting, safeCreateEmbedded, safeDelete, safeUpdate, canForcedMoveTarget, getTokenById, getWindowById, getItemDsid, footprintDistFromBounds, tokFootprintDist, getItemRange } from '../helpers.mjs';
 import { triggerGrabberFreeStrike, resolveEscapeChatMessage, resolveGrabConfirmChatMessage } from '../chat-integration.mjs';
 import { checkAndRunTargetPicker, runSourcePicker, runMultiTokenPicker } from '../ability-automation/target-picker.mjs';
 import { checkAndRunSquadTargeting } from '../ability-automation/squad-targeting.mjs';
@@ -459,7 +459,7 @@ export class GrabPanel extends ds.applications.api.DSApplication {
 
       if (dist >= canvas.grid.distance) {
         window._grabFollowActive.add(grabbedTokenId);
-        await grabbedTok.document.update({ x: grabberTok.document.x + (grab.offsetX ?? 0), y: grabberTok.document.y + (grab.offsetY ?? 0) });
+        await safeUpdate(grabbedTok.document, { x: grabberTok.document.x + (grab.offsetX ?? 0), y: grabberTok.document.y + (grab.offsetY ?? 0) });
         window._grabFollowActive.delete(grabbedTokenId);
         ui.notifications.warn(game.i18n.format('DSCT.notice.grab.mustBeAdjacent', { name: grab.grabbedName, grabber: grab.grabberName }));
       } else {
