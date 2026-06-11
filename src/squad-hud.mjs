@@ -61,7 +61,8 @@ function _squadDataList() {
       currHP,
       maxHP,
       tokens,
-      tint: GROUP_TINTS[num] ?? 0xffffff,
+      tint:   GROUP_TINTS[num] ?? 0xffffff,
+      hidden: group.hidden ?? false,
     });
   }
   return out;
@@ -285,7 +286,26 @@ function _buildContainer(data, entry, vis = 'all') {
   lockGfx.visible = false;
   c.addChild(lockGfx);
 
-  
+  if (game.user.isGM) {
+    const visSvg = new PIXI.SVGResource('icons/svg/blind.svg', { scale: (window.devicePixelRatio || 1) * 4 });
+    const visGfx = new PIXI.Sprite(new PIXI.Texture(new PIXI.BaseTexture(visSvg)));
+    visGfx.name   = 'vis-toggle';
+    visGfx.width  = 18;
+    visGfx.height = 18;
+    visGfx.tint   = 0xffffff;
+    visGfx.alpha  = data.hidden ? 1.0 : 0.3;
+    visGfx.x      = 4;
+    visGfx.y      = 4;
+    c.addChild(visGfx);
+  }
+
+  if (data.hidden) {
+    for (const child of c.children) {
+      if (child.name !== 'vis-toggle') child.alpha = 0.4;
+    }
+  }
+
+
   let _lastTap = 0;
   c.on('pointerdown', (ev) => {
     
@@ -308,7 +328,18 @@ function _buildContainer(data, entry, vis = 'all') {
     _lastTap = now;
 
     const local = ev.getLocalPosition(c);
-    
+
+    if (game.user.isGM && local.x >= 2 && local.x <= 24 && local.y >= 2 && local.y <= 24) {
+      ev.stopPropagation();
+      const _group = game.combat?.groups?.get(entry.groupId);
+      if (_group) {
+        const _hidden  = !entry.hidden;
+        const _updates = [..._group.members].map(m => ({ _id: m.id, hidden: _hidden }));
+        if (_updates.length) _group.parent.updateEmbeddedDocuments('Combatant', _updates);
+      }
+      return;
+    }
+
     if (entry.locked && local.x >= HUD_W - 24 && local.x <= HUD_W - 2 && local.y >= 2 && local.y <= 24) {
       entry.locked  = false;
       entry.gliding = true;
@@ -482,6 +513,9 @@ export function rebuildSquadHuds() {
     const vis = _effectivePlayerVis(data.tokens);
     if (vis === 'none') continue;
 
+    const isOwnerOrGM = game.user.isGM || data.tokens.some(t => t.document.isOwner);
+    if (data.hidden && !isOwnerOrGM) continue;
+
     const hudPos = _hudTargetPos(data.tokens);
     if (!hudPos) continue;
     const { x, y } = hudPos;
@@ -505,6 +539,7 @@ export function rebuildSquadHuds() {
       maxHP:     data.maxHP,
       currHP:    data.currHP,
       total:     data.total,
+      hidden:    data.hidden,
       lineAlpha: 0,
       hovering:  false,
       locked:    false,
@@ -513,7 +548,7 @@ export function rebuildSquadHuds() {
       animTo:    data.currHP,
       animT:     1,
       animDur:   1000,
-      swayPhase: Math.random() * Math.PI * 2, 
+      swayPhase: Math.random() * Math.PI * 2,
       _sbSwayX:  0,
       _sbSwayY:  0,
     };
@@ -635,7 +670,7 @@ function _tickHuds() {
       
       const isHovered = entry.hovering
         || entry.tokens.some(t => t.controlled || game.user.targets.has(t));
-      const lineTarget = isHovered ? 1 : 0;
+      const lineTarget = isHovered ? (entry.hidden ? 0.4 : 1) : 0;
       if (entry.lineAlpha !== lineTarget) {
         const dir = lineTarget > entry.lineAlpha ? 1 : -1;
         entry.lineAlpha = Math.max(0, Math.min(1, entry.lineAlpha + dir * lineStep));
