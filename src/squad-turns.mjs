@@ -2,6 +2,10 @@ import { getSetting } from './helpers.mjs';
 
 const _priorGroupInitiative = new Map();
 let _squadBatchInProgress = false;
+const _activatedGroupIds = new Set();
+
+window._dsctActiveSquadGroupId   = window._dsctActiveSquadGroupId   ?? null;
+window._dsctActivatingGroupId    = window._dsctActivatingGroupId    ?? null;
 
 function getSquadGroup(combatant) {
   return combatant?.group?.type === 'squad' ? combatant.group : null;
@@ -23,6 +27,7 @@ function findSiblingGroups(combat, group) {
 async function fireStartTurn(member, combat) {
   const idx = combat.turns.findIndex(c => c === member);
   if (idx < 0) return;
+  await member.actor?.system?._onStartTurn?.(member);
   const ctx = { round: combat.round, turn: idx, skipped: false };
   const combatProxy = Object.create(combat, {
     combatant: { get: () => member, configurable: true }
@@ -39,10 +44,6 @@ async function fireStartTurn(member, combat) {
 
 async function fireEndTurn(member, combat, round) {
   const idx = combat.turns.findIndex(c => c === member);
-  if (getSetting('debugMode')) {
-    const effectDebug = member.actor?.appliedEffects?.map(e => `${e.name}(${e.duration?.expiry},rem=${e.duration?.remaining})`).join(', ') ?? 'none';
-    console.log(`DSCT | fireEndTurn: ${member.name}, idx=${idx}, effects=[${effectDebug}]`);
-  }
   if (idx < 0) return;
   const ctx = { round, turn: idx, skipped: false };
   await combat._onEndTurn(member, ctx);
@@ -72,11 +73,6 @@ async function fireEndTurn(member, combat, round) {
 async function activateSquadMembers(group, combat, skipMember) {
   const membersToActivate = [...group.members].filter(m => m !== skipMember && m.initiative > 0);
   if (!membersToActivate.length) return;
-  await combat.updateEmbeddedDocuments(
-    'Combatant',
-    membersToActivate.map(m => ({ _id: m.id, initiative: m.initiative - 1 })),
-    { _dsctSquadBatch: true }
-  );
   for (const member of membersToActivate) {
     await fireStartTurn(member, combat);
   }
@@ -91,7 +87,64 @@ function refreshSquadMarkers(group, primaryToken) {
   }
 }
 
+function _patchCombatDock() {
+  if (!game.modules.get('draw-steel-combat-tracker')?.active) return;
+  const dock = ui.dsCombatDock;
+  if (!dock) return;
+  const proto = Object.getPrototypeOf(dock);
+  if (!proto || proto._dsctSquadPatch) return;
+
+  const origGetEntries = proto._getEntries;
+  proto._getEntries = function() {
+    const entries = origGetEntries.call(this);
+    if (!getSetting('squadSimultaneousTurns')) return entries;
+    for (const entry of entries) {
+      if (!entry.isGroup) continue;
+      const group = this.combat?.groups?.get(entry.id);
+      if (group?.type !== 'squad') continue;
+      const groupCanAct = group.initiative > 0;
+      for (const m of [entry.captainData, ...(entry.nonMinionMembers ?? []), ...(entry.minionGroups ?? []).flat()].filter(Boolean)) {
+        m.canAct = groupCanAct;
+      }
+    }
+    return entries;
+  };
+
+  const origMiniClick = proto._onMiniPortraitClick;
+  proto._onMiniPortraitClick = function(event, el) {
+    if (!getSetting('squadSimultaneousTurns')) return origMiniClick.call(this, event, el);
+    const combatant = this.combat?.combatants?.get(el.dataset.memberId);
+    if (combatant?.group?.type === 'squad') {
+      return this._onGroupPillClick(event, { dataset: { id: combatant.group.id } });
+    }
+    return origMiniClick.call(this, event, el);
+  };
+
+  proto._dsctSquadPatch = true;
+}
+
 export function registerSquadTurnHooks() {
+  Hooks.on('combatRoundChange', () => _activatedGroupIds.clear());
+  Hooks.on('deleteCombat', () => {
+    _activatedGroupIds.clear();
+    window._dsctActiveSquadGroupId  = null;
+    window._dsctActivatingGroupId   = null;
+  });
+
+  Hooks.on('ready', _patchCombatDock);
+  Hooks.on('combatStart', _patchCombatDock);
+
+  Hooks.on('renderCombatTracker', (_app, html) => {
+    if (!getSetting('squadSimultaneousTurns')) return;
+    const el = html instanceof HTMLElement ? html : html[0];
+    if (!el) return;
+    for (const group of el.querySelectorAll('.combatant-group:has(.squad-stamina)')) {
+      for (const initDiv of group.querySelectorAll('.group-turns .token-initiative')) {
+        initDiv.style.display = 'none';
+      }
+    }
+  });
+
   Hooks.on('preUpdateCombatantGroup', (group, changes) => {
     if (_squadBatchInProgress) return;
     if ('initiative' in changes) _priorGroupInitiative.set(group.id, group.initiative);
@@ -110,23 +163,20 @@ export function registerSquadTurnHooks() {
     const combat = group.parent;
     if (!combat) return;
 
-    if (getSetting('debugMode')) {
-      const members = [...group.members];
-      const memberInits = members.map(m => `${m.name}(${m.initiative})`).join(', ');
-      console.log(`DSCT | squad batch activate (group): ${group.name}, groupInit=${changes.initiative}(was ${oldInit}), members=[${memberInits}]`);
-    }
-
+    window._dsctActivatingGroupId = group.id;
     _squadBatchInProgress = true;
+    _activatedGroupIds.add(group.id);
     try {
       await activateSquadMembers(group, combat, null);
 
       for (const sibGroup of findSiblingGroups(combat, group)) {
         if (!(sibGroup.initiative > 0)) continue;
-        if (getSetting('debugMode')) console.log(`DSCT | squad batch activate (sibling): ${sibGroup.name}`);
+        _activatedGroupIds.add(sibGroup.id);
         await activateSquadMembers(sibGroup, combat, null);
         await sibGroup.update({ initiative: sibGroup.initiative - 1 });
       }
     } finally {
+      window._dsctActivatingGroupId = null;
       _squadBatchInProgress = false;
     }
   });
@@ -140,23 +190,25 @@ export function registerSquadTurnHooks() {
 
     const group = getSquadGroup(combatant);
     if (!group || !(group.initiative > 0)) return;
+    if (_activatedGroupIds.has(group.id)) return;
 
     const combat = combatant.parent;
     if (!combat) return;
 
-    if (getSetting('debugMode')) console.log(`DSCT | squad batch activate (individual): ${combatant.name} in ${group.name}`);
-
+    window._dsctActivatingGroupId = group.id;
     _squadBatchInProgress = true;
+    _activatedGroupIds.add(group.id);
     try {
       await activateSquadMembers(group, combat, combatant);
       await group.update({ initiative: group.initiative - 1 });
       for (const sibGroup of findSiblingGroups(combat, group)) {
         if (!(sibGroup.initiative > 0)) continue;
-        if (getSetting('debugMode')) console.log(`DSCT | squad batch activate (sibling): ${sibGroup.name}`);
+        _activatedGroupIds.add(sibGroup.id);
         await activateSquadMembers(sibGroup, combat, null);
         await sibGroup.update({ initiative: sibGroup.initiative - 1 });
       }
     } finally {
+      window._dsctActivatingGroupId = null;
       _squadBatchInProgress = false;
     }
   });
@@ -170,11 +222,16 @@ export function registerSquadTurnHooks() {
     const cur  = combat.combatants.get(current?.combatantId);
     const curGroup  = getSquadGroup(cur);
 
-    if (getSetting('debugMode')) console.log(`DSCT | combatTurnChange: prev=${prev?.name}(groupId=${prev?.group?.id}), cur=${cur?.name}, prevSquad=${prevGroup?.name ?? 'none'}, curSquad=${curGroup?.name ?? 'none'}`);
+    if (window._dsctActivatingGroupId && curGroup?.id !== window._dsctActivatingGroupId) {
+      return;
+    }
 
     if (curGroup) {
+      window._dsctActiveSquadGroupId = curGroup.id;
       const primaryToken = cur?.token?.object ?? canvas.tokens?.get(cur?.tokenId);
       refreshSquadMarkers(curGroup, primaryToken);
+    } else if (!current?.combatantId) {
+      window._dsctActiveSquadGroupId = null;
     }
 
     if (prevGroup && cur?.group?.id !== prev?.group?.id) {
@@ -208,17 +265,35 @@ export function registerSquadTurnHooks() {
         return wrapped(...args);
       }
 
-      const activeCombatant = game.combat?.combatant;
-      if (activeCombatant?.group?.type === 'squad') {
-        const myCombatant = game.combat.combatants?.find(c => c.tokenId === this.id);
-        if (myCombatant?.group?.id === activeCombatant.group?.id && myCombatant !== activeCombatant) {
+      const activeGroupId = window._dsctActiveSquadGroupId;
+      const nativeActiveCombatant = game.combat?.combatant;
+
+      if (activeGroupId) {
+        const myCombatant = game.combat?.combatants?.find(c => c.tokenId === this.id);
+        const inActiveGroup = myCombatant?.group?.id === activeGroupId;
+
+        if (!inActiveGroup) {
+          if (this._dsctMarkerWrapper) {
+            canvas.tokens?.removeChild(this._dsctMarkerWrapper);
+            this._dsctMarkerWrapper.destroy({ children: true });
+            this._dsctMarkerWrapper = null;
+            this.turnMarker = null;
+            canvas.tokens?.turnMarkers?.delete(this);
+          }
+          return wrapped(...args);
+        }
+
+        if (myCombatant?.id !== nativeActiveCombatant?.id) {
           const { turnMarker } = this.document;
           const markersEnabled = CONFIG.Combat.settings?.turnMarker?.enabled
             && turnMarker?.mode !== CONST.TOKEN_TURN_MARKER_MODES?.DISABLED;
 
           if (markersEnabled) {
+            const activeCombatantToken = game.combat?.combatants?.get(
+              [...(game.combat?.groups?.get(activeGroupId)?.members ?? [])][0]?.id
+            )?.token?.object;
             const TurnMarkerCtor = globalThis.TokenTurnMarker
-              ?? canvas.tokens?.get(activeCombatant.tokenId)?.turnMarker?.constructor
+              ?? activeCombatantToken?.turnMarker?.constructor
               ?? [...(canvas.tokens?.turnMarkers ?? [])].find(t => t.turnMarker)?.turnMarker?.constructor;
             if (TurnMarkerCtor) {
               if (!this.turnMarker) {
