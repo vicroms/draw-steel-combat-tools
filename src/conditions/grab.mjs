@@ -87,7 +87,7 @@ const ensureGrabHooks = () => {
           ? effectToken.id === grab.grabberTokenId
           : effect.parent?.id === grab.grabberActorId;
         if (!isGrabber) continue;
-        await endGrab(gid, { silent: false, customMsg: `${grab.grabberName} was grabbed and released ${grab.grabbedName}.` });
+        await endGrab(gid, { silent: !game.user.isGM, customMsg: game.user.isGM ? `${grab.grabberName} was grabbed and released ${grab.grabbedName}.` : null });
       }
     });
   }
@@ -101,7 +101,7 @@ const ensureGrabHooks = () => {
         const msg = isGrabber
           ? `${grab.grabberName}'s Grabber effect was removed, ending the grab on ${grab.grabbedName}.`
           : `${grab.grabbedName}'s Grabbed effect was removed, ending the grab.`;
-        await endGrab(gid, { silent: false, customMsg: msg });
+        await endGrab(gid, { silent: !game.user.isGM, customMsg: game.user.isGM ? msg : null });
         break;
       }
     });
