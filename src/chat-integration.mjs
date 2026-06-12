@@ -158,6 +158,7 @@ function registerRollDialogHooks() {
 
     const ability = app.options.ability;
     if (!ability) return;
+    if (!ability.system?.power?.roll?.enabled) return;
     const actor = ability.actor ?? ability.parent;
     if (!actor) return;
 
