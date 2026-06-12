@@ -53,8 +53,8 @@ export const registerCombatLogHooks = () => {
     const prevC = prior.combatantId ? combat.combatants.get(prior.combatantId) : null;
     const curC  = current.combatantId ? combat.combatants.get(current.combatantId) : null;
 
-    const prevGroup = prevC?.group?.type === 'squad' ? prevC.group : null;
-    const curGroup  = curC?.group?.type === 'squad' ? curC.group : null;
+    const prevGroup = (prevC?.group?.type === 'squad' || (prevC?.group?.type === 'base' && prevC.group.members.size > 1)) ? prevC.group : null;
+    const curGroup  = (curC?.group?.type === 'squad'  || (curC?.group?.type  === 'base' && curC.group.members.size  > 1)) ? curC.group  : null;
 
     const sameTurn = prevC && curC && prevC.group?.id && prevC.group?.id === curC.group?.id;
     if (sameTurn) return; 
