@@ -232,14 +232,26 @@
         "label": "Configure Combat Logs",
         "hint": "Configure combat event logging to the chat window."
       },
-      "squadLabelsSettings": {
-        "name": "Squad Labels Settings",
-        "label": "Configure Squad Labels",
-        "hint": "Configure automatic squad label behavior during combat."
+      "squadToolsSettings": {
+        "name": "Squad Tools Settings",
+        "label": "Configure Squad Tools",
+        "hint": "Configure squad labels, simultaneous turns, and the squad HUD."
+      },
+      "squadToolsEnabled": {
+        "name": "Enable Squad Tools",
+        "hint": "Master toggle for all squad tools features. Disabling this turns off squad labels, simultaneous turns, and the squad HUD."
       },
       "autoSquadLabelsEnabled": {
         "name": "Enable Squad Labels",
         "hint": "Prompts to apply purely visual squad label effects to squads when combat starts. Optionally renames squads to match numbers with labels."
+      },
+      "squadGlowMarker": {
+        "name": "Subtle Turn Markers",
+        "hint": "Replace turn markers on active combatant tokens with a soft pulsing glow."
+      },
+      "squadGlowMarkerColored": {
+        "name": "Colored Glow",
+        "hint": "Tint the glow with the group color. Player tokens use their player color; numbered squads use their group color."
       },
       "squadLabelApplyEffects": {
         "name": "Auto-Apply Label Effects",
@@ -269,7 +281,7 @@
         "hint": "When a squad group takes its turn, all minions in the squad activate simultaneously. Each member's initiative is decremented, start-of-turn effects fire for all of them, and the combat marker appears under every squad token."
       },
       "squadHudEnabled": {
-        "name": "Floating Squad HUD",
+        "name": "Squad HUD",
         "hint": "Replaces individual minion token health bars with a shared floating bar for each squad. The bar shows the squad name, a segmented fill per minion, and live HP numbers. Hovering any minion or the bar fades in lines linking the bar to each squad member."
       },
       "squadHudScale": {
@@ -550,7 +562,7 @@
         "VerticalDistance": "Vertical Distance",
         "HomeRulesSettings": "Home Rules",
         "CompatibilitySettings": "Compatibility",
-        "SquadLabelsSettings": "Squad Labels Settings",
+        "SquadToolsSettings": "Squad Tools Settings",
         "CombatLogsSettings": "Combat Logs"
       },
       "fm": {

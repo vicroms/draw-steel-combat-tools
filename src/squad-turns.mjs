@@ -4,6 +4,10 @@ const _priorGroupInitiative = new Map();
 let _squadBatchInProgress = false;
 const _activatedGroupIds = new Set();
 
+let _glowTicker = null;
+let _glowTime = 0;
+const _glowTargets = new Set();
+
 window._dsctActiveSquadGroupId   = window._dsctActiveSquadGroupId   ?? null;
 window._dsctActivatingGroupId    = window._dsctActivatingGroupId    ?? null;
 
@@ -93,6 +97,66 @@ function refreshSquadMarkers(group, primaryToken) {
   }
 }
 
+function _cleanupMarkerWrapper(token) {
+  if (token._dsctGlowGraphic) {
+    _glowTargets.delete(token._dsctGlowGraphic);
+    token._dsctGlowGraphic = null;
+    if (_glowTargets.size === 0 && _glowTicker) {
+      canvas.app.ticker.remove(_glowTicker);
+      _glowTicker = null;
+    }
+  }
+  if (token._dsctMarkerWrapper) {
+    canvas.tokens?.removeChild(token._dsctMarkerWrapper);
+    token._dsctMarkerWrapper.destroy({ children: true });
+    token._dsctMarkerWrapper = null;
+    token.turnMarker = null;
+    canvas.tokens?.turnMarkers?.delete(token);
+  } else if (token.turnMarker) {
+    canvas.tokens?.turnMarkers?.delete(token);
+    try { token.turnMarker.destroy(); } catch {}
+    token.turnMarker = null;
+  }
+}
+
+const _GLOW_TINTS = {
+  1: 0xff4444, 2: 0x4488ff, 3: 0x44dd44,  4: 0xffcc00,
+  5: 0xff44ff, 6: 0x44ffff, 7: 0xff8800,  8: 0xaa44ff,
+  9: 0x00ff88, 10: 0xff88aa,
+};
+
+function _resolveGlowColor(combatant, groupId) {
+  if (!getSetting('squadGlowMarkerColored')) return 0xffffff;
+  const playerUser = game.users?.find(u => u.character?.id === combatant?.actor?.id);
+  if (playerUser) return Number(playerUser.color.valueOf?.() ?? playerUser.color);
+  const grp = game.combat?.groups?.get(groupId);
+  const num = parseInt(grp?.name?.match(/^Group (\d+)/i)?.[1]) || 0;
+  return _GLOW_TINTS[num] ?? 0xffffff;
+}
+
+function _makeGlowGraphic(token, color = 0xffffff) {
+  const gs = canvas.grid.size;
+  const tw = (token.document.width  ?? 1) * gs;
+  const th = (token.document.height ?? 1) * gs;
+  const r  = Math.max(tw, th) / 2 + gs * 0.12;
+  const gfx = new PIXI.Graphics();
+  gfx.beginFill(color, 1);
+  gfx.drawCircle(tw / 2, th / 2, r);
+  gfx.endFill();
+  gfx.filters = [new PIXI.BlurFilter(gs * 0.18)];
+  gfx.alpha = 0.3;
+  if (!_glowTicker) {
+    _glowTicker = () => {
+      _glowTime += canvas.app.ticker.deltaMS / 1000;
+      const a = 0.25 + 0.2 * Math.sin(_glowTime * Math.PI * 1.5);
+      for (const g of _glowTargets) g.alpha = a;
+    };
+    canvas.app.ticker.add(_glowTicker);
+  }
+  _glowTargets.add(gfx);
+  return gfx;
+}
+
 function _patchCombatDock() {
   if (!game.modules.get('draw-steel-combat-tracker')?.active) return;
   const dock = ui.dsCombatDock;
@@ -137,6 +201,9 @@ export function registerSquadTurnHooks() {
     _activatedGroupIds.clear();
     window._dsctActiveSquadGroupId  = null;
     window._dsctActivatingGroupId   = null;
+    if (_glowTicker) { canvas.app.ticker.remove(_glowTicker); _glowTicker = null; }
+    _glowTargets.clear();
+    _glowTime = 0;
   });
 
   Hooks.on('ready', () => {
@@ -145,13 +212,28 @@ export function registerSquadTurnHooks() {
   });
   Hooks.on('combatStart', _patchCombatDock);
 
+  Hooks.on('canvasReady', () => {
+    if (!getSetting('squadGlowMarker') && !getSetting('squadSimultaneousTurns')) return;
+    const activeCombatant = game.combat?.combatant;
+    if (!activeCombatant) return;
+    const activeGroup = getSquadGroup(activeCombatant);
+    if (activeGroup) {
+      window._dsctActiveSquadGroupId = activeGroup.id;
+      for (const member of activeGroup.members) {
+        member.token?.object?._refreshTurnMarker?.();
+      }
+    } else {
+      activeCombatant.token?.object?._refreshTurnMarker?.();
+    }
+  });
+
   Hooks.on('renderCombatTracker', (_app, html) => {
     if (!getSetting('squadSimultaneousTurns')) return;
     const el = html instanceof HTMLElement ? html : html[0];
     if (!el) return;
-    for (const [groupId, group] of (game.combat?.groups ?? [])) {
+    for (const group of (game.combat?.groups ?? [])) {
       if (group.type !== 'squad' && !(group.type === 'base' && group.members.size > 1)) continue;
-      const groupEl = el.querySelector(`.combatant-group[data-group-id="${groupId}"]`);
+      const groupEl = el.querySelector(`.combatant-group[data-group-id="${group.id}"]`);
       if (!groupEl) continue;
       for (const initDiv of groupEl.querySelectorAll('.group-turns .token-initiative')) {
         initDiv.style.display = 'none';
@@ -269,84 +351,69 @@ export function registerSquadTurnHooks() {
 
   if (typeof libWrapper !== 'undefined') {
     libWrapper.register('draw-steel-combat-tools', 'Token.prototype._refreshTurnMarker', function(wrapped, ...args) {
-      if (!getSetting('squadSimultaneousTurns')) {
-        if (this._dsctMarkerWrapper) {
-          canvas.tokens?.removeChild(this._dsctMarkerWrapper);
-          this._dsctMarkerWrapper.destroy({ children: true });
-          this._dsctMarkerWrapper = null;
-          this.turnMarker = null;
-          canvas.tokens?.turnMarkers?.delete(this);
+      const myCombatant    = game.combat?.combatants?.find(c => c.tokenId === this.id);
+      const activeGroupId  = window._dsctActiveSquadGroupId;
+      const isNativeActive = myCombatant?.id === game.combat?.combatant?.id;
+      const inActiveGroup  = !!activeGroupId && myCombatant?.group?.id === activeGroupId;
+
+      if (getSetting('squadGlowMarker') && (isNativeActive || inActiveGroup)) {
+        if (!this._dsctGlowGraphic) {
+          _cleanupMarkerWrapper(this);
+          const glow = _makeGlowGraphic(this, _resolveGlowColor(myCombatant, myCombatant?.group?.id ?? activeGroupId));
+          const wrapper = new PIXI.Container();
+          const { x, y } = this.document;
+          wrapper.position.set(x, y);
+          canvas.tokens.addChildAt(wrapper, 0);
+          wrapper.addChild(glow);
+          this._dsctMarkerWrapper = wrapper;
+          this._dsctGlowGraphic   = glow;
+          this.turnMarker         = null;
         }
+        canvas.tokens.turnMarkers?.add(this);
+        return;
+      }
+
+      if (this._dsctGlowGraphic) _cleanupMarkerWrapper(this);
+
+      if (!getSetting('squadSimultaneousTurns') || !inActiveGroup) {
+        _cleanupMarkerWrapper(this);
         return wrapped(...args);
       }
 
-      const activeGroupId = window._dsctActiveSquadGroupId;
-      const nativeActiveCombatant = game.combat?.combatant;
+      if (!isNativeActive) {
+        const { turnMarker } = this.document;
+        const markersEnabled = CONFIG.Combat.settings?.turnMarker?.enabled
+          && turnMarker?.mode !== CONST.TOKEN_TURN_MARKER_MODES?.DISABLED;
 
-      if (activeGroupId) {
-        const myCombatant = game.combat?.combatants?.find(c => c.tokenId === this.id);
-        const inActiveGroup = myCombatant?.group?.id === activeGroupId;
-
-        if (!inActiveGroup) {
-          if (this._dsctMarkerWrapper) {
-            canvas.tokens?.removeChild(this._dsctMarkerWrapper);
-            this._dsctMarkerWrapper.destroy({ children: true });
-            this._dsctMarkerWrapper = null;
-            this.turnMarker = null;
-            canvas.tokens?.turnMarkers?.delete(this);
-          }
-          return wrapped(...args);
-        }
-
-        if (myCombatant?.id !== nativeActiveCombatant?.id) {
-          const { turnMarker } = this.document;
-          const markersEnabled = CONFIG.Combat.settings?.turnMarker?.enabled
-            && turnMarker?.mode !== CONST.TOKEN_TURN_MARKER_MODES?.DISABLED;
-
-          if (markersEnabled) {
-            const activeCombatantToken = game.combat?.combatants?.get(
-              [...(game.combat?.groups?.get(activeGroupId)?.members ?? [])][0]?.id
-            )?.token?.object;
-            const TurnMarkerCtor = globalThis.TokenTurnMarker
-              ?? activeCombatantToken?.turnMarker?.constructor
-              ?? [...(canvas.tokens?.turnMarkers ?? [])].find(t => t.turnMarker)?.turnMarker?.constructor;
-            if (TurnMarkerCtor) {
-              if (!this.turnMarker) {
-                const marker = new TurnMarkerCtor(this);
-                const wrapper = new PIXI.Container();
-                const { x, y } = this.document;
-                wrapper.position.set(x, y);
-                canvas.tokens.addChildAt(wrapper, 0);
-                wrapper.addChild(marker);
-                this._dsctMarkerWrapper = wrapper;
-                this.turnMarker = marker;
-              }
-              canvas.tokens.turnMarkers?.add(this);
-              this.turnMarker.draw();
-              return;
+        if (markersEnabled) {
+          const activeCombatantToken = game.combat?.combatants?.get(
+            [...(game.combat?.groups?.get(activeGroupId)?.members ?? [])][0]?.id
+          )?.token?.object;
+          const TurnMarkerCtor = globalThis.TokenTurnMarker
+            ?? activeCombatantToken?.turnMarker?.constructor
+            ?? [...(canvas.tokens?.turnMarkers ?? [])].find(t => t.turnMarker)?.turnMarker?.constructor;
+          if (TurnMarkerCtor) {
+            if (!this.turnMarker) {
+              const marker = new TurnMarkerCtor(this);
+              const wrapper = new PIXI.Container();
+              const { x, y } = this.document;
+              wrapper.position.set(x, y);
+              canvas.tokens.addChildAt(wrapper, 0);
+              wrapper.addChild(marker);
+              this._dsctMarkerWrapper = wrapper;
+              this.turnMarker = marker;
             }
-          } else if (this.turnMarker) {
-            if (this._dsctMarkerWrapper) {
-              canvas.tokens?.removeChild(this._dsctMarkerWrapper);
-              this._dsctMarkerWrapper.destroy({ children: true });
-              this._dsctMarkerWrapper = null;
-            } else {
-              canvas.tokens.turnMarkers?.delete(this);
-              this.turnMarker.destroy();
-            }
-            this.turnMarker = null;
+            canvas.tokens.turnMarkers?.add(this);
+            this.turnMarker.draw();
             return;
           }
+        } else if (this.turnMarker) {
+          _cleanupMarkerWrapper(this);
+          return;
         }
       }
 
-      if (this._dsctMarkerWrapper) {
-        canvas.tokens?.removeChild(this._dsctMarkerWrapper);
-        this._dsctMarkerWrapper.destroy({ children: true });
-        this._dsctMarkerWrapper = null;
-        this.turnMarker = null;
-        canvas.tokens?.turnMarkers?.delete(this);
-      }
+      _cleanupMarkerWrapper(this);
       return wrapped(...args);
     }, 'MIXED');
   }

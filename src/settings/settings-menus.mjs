@@ -718,17 +718,73 @@ export class CombatLogsSettingsMenu extends SettingsSubmenu {
   }
 }
 
-export class SquadLabelsSettingsMenu extends SettingsSubmenu {
+export class SquadToolsSettingsMenu extends SettingsSubmenu {
   static DEFAULT_OPTIONS = {
-    id:     'dsct-squad-labels-settings',
-    window: { title: 'DSCT.panel.title.SquadLabelsSettings' },
+    id:     'dsct-squad-tools-settings',
+    window: { title: 'DSCT.panel.title.SquadToolsSettings' },
   };
 
-  static get enableKey()   { return 'autoSquadLabelsEnabled'; }
+  static get enableKey()   { return 'squadToolsEnabled'; }
 
   static get regularKeys() {
-    return ['autoSquadLabelsEnabled', 'squadLabelApplyEffects', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadLabelRenamePreference', 'squadSimultaneousTurns', 'squadHudEnabled', 'squadHudScale', 'squadHudPlayerVisibility'];
+    return [
+      'squadToolsEnabled',
+      header('Squad Labels'),
+      'autoSquadLabelsEnabled',
+      'squadLabelApplyEffects',
+      'squadLabelAutoRelabel',
+      'squadLabelCaptainNow',
+      'squadCaptainShortcut',
+      'squadLabelRenamePreference',
+      header('Simultaneous Turns'),
+      'squadSimultaneousTurns',
+      header('Subtle Turn Markers'),
+      'squadGlowMarker',
+      'squadGlowMarkerColored',
+      header('Squad HUD'),
+      'squadHudEnabled',
+      'squadHudScale',
+      'squadHudPlayerVisibility',
+    ];
   }
 
   static get debugKeys() { return ['stickbugMode', 'stickbugChatTrigger']; }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const el = this.element;
+
+    const labelsInput = el.querySelector('[name="autoSquadLabelsEnabled"]');
+    const labelKeys   = ['squadLabelApplyEffects', 'squadLabelAutoRelabel', 'squadLabelCaptainNow', 'squadCaptainShortcut', 'squadLabelRenamePreference'];
+    const labelGroups = labelKeys.map(k => el.querySelector(`[name="${k}"]`)?.closest('.form-group')).filter(Boolean);
+    const syncLabels  = (on) => {
+      for (const grp of labelGroups) {
+        grp.classList.toggle('dsct-sub-disabled', !on);
+        grp.querySelectorAll('input, select').forEach(i => { i.disabled = !on; });
+      }
+    };
+    syncLabels(labelsInput?.checked ?? true);
+    labelsInput?.addEventListener('change', () => syncLabels(labelsInput.checked));
+
+    const glowInput    = el.querySelector('[name="squadGlowMarker"]');
+    const coloredGroup = el.querySelector('[name="squadGlowMarkerColored"]')?.closest('.form-group');
+    const syncColored  = (on) => {
+      coloredGroup?.classList.toggle('dsct-sub-disabled', !on);
+      coloredGroup?.querySelectorAll('input, select').forEach(i => { i.disabled = !on; });
+    };
+    syncColored(glowInput?.checked ?? true);
+    glowInput?.addEventListener('change', () => syncColored(glowInput.checked));
+
+    const hudInput     = el.querySelector('[name="squadHudEnabled"]');
+    const hudSubKeys   = ['squadHudScale', 'squadHudPlayerVisibility'];
+    const hudGroups    = hudSubKeys.map(k => el.querySelector(`[name="${k}"]`)?.closest('.form-group')).filter(Boolean);
+    const syncHud      = (on) => {
+      for (const grp of hudGroups) {
+        grp.classList.toggle('dsct-sub-disabled', !on);
+        grp.querySelectorAll('input, select').forEach(i => { i.disabled = !on; });
+      }
+    };
+    syncHud(hudInput?.checked ?? true);
+    hudInput?.addEventListener('change', () => syncHud(hudInput.checked));
+  }
 }

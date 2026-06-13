@@ -9,7 +9,7 @@ import {
   ModuleButtonsSettingsMenu,
   HomeRulesSettingsMenu,
   CompatibilitySettingsMenu,
-  SquadLabelsSettingsMenu,
+  SquadToolsSettingsMenu,
   CombatLogsSettingsMenu,
 } from './settings-menus.mjs';
 
@@ -330,13 +330,25 @@ export const registerSettings = () => {
     }
   });
 
-  game.settings.registerMenu(M, 'squadLabelsSettings', {
-    name: L('squadLabelsSettings.name'), label: L('squadLabelsSettings.label'),
-    hint: L('squadLabelsSettings.hint'),
-    icon: 'fas fa-tags', type: SquadLabelsSettingsMenu, restricted: true,
+  game.settings.registerMenu(M, 'squadToolsSettings', {
+    name: L('squadToolsSettings.name'), label: L('squadToolsSettings.label'),
+    hint: L('squadToolsSettings.hint'),
+    icon: 'fas fa-tags', type: SquadToolsSettingsMenu, restricted: true,
+  });
+  game.settings.register(M, 'squadToolsEnabled', {
+    name: L('squadToolsEnabled.name'), hint: L('squadToolsEnabled.hint'),
+    scope: 'world', config: false, type: Boolean, default: true,
   });
   game.settings.register(M, 'autoSquadLabelsEnabled', {
     name: L('autoSquadLabelsEnabled.name'), hint: L('autoSquadLabelsEnabled.hint'),
+    scope: 'world', config: false, type: Boolean, default: true,
+  });
+  game.settings.register(M, 'squadGlowMarker', {
+    name: L('squadGlowMarker.name'), hint: L('squadGlowMarker.hint'),
+    scope: 'world', config: false, type: Boolean, default: true,
+  });
+  game.settings.register(M, 'squadGlowMarkerColored', {
+    name: L('squadGlowMarkerColored.name'), hint: L('squadGlowMarkerColored.hint'),
     scope: 'world', config: false, type: Boolean, default: true,
   });
   game.settings.register(M, 'squadLabelApplyEffects', {
