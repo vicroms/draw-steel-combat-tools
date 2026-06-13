@@ -329,7 +329,7 @@ export function registerSquadTurnHooks() {
       window._dsctActiveSquadGroupId = curGroup.id;
       const primaryToken = cur?.token?.object ?? canvas.tokens?.get(cur?.tokenId);
       refreshSquadMarkers(curGroup, primaryToken);
-    } else if (!current?.combatantId) {
+    } else {
       window._dsctActiveSquadGroupId = null;
     }
 

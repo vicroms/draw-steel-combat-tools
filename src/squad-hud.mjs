@@ -310,12 +310,19 @@ function _buildContainer(data, entry, vis = 'all') {
       const isLeader = filter.organization('leader');
       const isSolo   = filter.organization('solo');
       const isMount  = filter.keyword('mount');
+      const takenIds = new Set(
+        [...(game.combat?.groups ?? [])]
+          .filter(g => g.id !== group.id)
+          .map(g => g.system?.captainId)
+          .filter(Boolean)
+      );
       const candidateTokens = [...(game.combat?.combatants ?? [])]
         .filter(c => {
           const a = c.actor;
           if (!a || a.type !== 'npc') return false;
           if (a.system?.isMinion) return false;
           if (isLeader(a) || isSolo(a) || isMount(a)) return false;
+          if (takenIds.has(c.id)) return false;
           return !c.defeated;
         })
         .map(c => canvas.tokens.placeables.find(t => t.id === c.tokenId))
