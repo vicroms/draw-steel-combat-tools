@@ -5,6 +5,68 @@ const M = 'draw-steel-combat-tools';
 let previousTurnStrikes = new Set();
 let currentTurnStrikes  = new Set();
 
+const CF_EFFECT_DEFS = {
+  melee: {
+    name: 'Crossfade: Melee Edge',
+    img:  'icons/skills/melee/sword-winged-holy-orange.webp',
+    type: 'base',
+    system: { end: { type: 'encounter', roll: '1d10 + @combat.save.bonus' }, filters: { keywords: [] } },
+    changes: [], disabled: false,
+    duration: { startTime: 0, combat: null, seconds: null, rounds: null, turns: null, startRound: null, startTurn: null },
+    description: '', tint: '#ffffff', transfer: false, statuses: [], sort: 0,
+    flags: { [M]: { isCrossfadeEffect: true, strikeType: 'melee' } },
+  },
+  ranged: {
+    name: 'Crossfade: Ranged Edge',
+    img:  'icons/skills/ranged/shuriken-thrown-orange.webp',
+    type: 'base',
+    system: { end: { type: 'encounter', roll: '1d10 + @combat.save.bonus' }, filters: { keywords: [] } },
+    changes: [], disabled: false,
+    duration: { startTime: 0, combat: null, seconds: null, rounds: null, turns: null, startRound: null, startTurn: null },
+    description: '', tint: '#ffffff', transfer: false, statuses: [], sort: 0,
+    flags: { [M]: { isCrossfadeEffect: true, strikeType: 'ranged' } },
+  },
+};
+
+function _getCfEffect(actor, type) {
+  return actor.effects.find(e => e.getFlag(M, 'isCrossfadeEffect') && e.getFlag(M, 'strikeType') === type);
+}
+
+async function _hydrateCrossfadeState() {
+  const cfActor   = findCrossfadeActor();
+  const combatant = cfActor ? game.combat?.combatants.find(c => c.actorId === cfActor.id && !c.defeated) : null;
+  if (!combatant) return;
+  previousTurnStrikes = new Set(combatant.getFlag(M, 'crossfadePrevStrikes') ?? []);
+  currentTurnStrikes  = new Set(combatant.getFlag(M, 'crossfadeCurrStrikes') ?? []);
+  if (game.users.activeGM?.isSelf) await _syncCfEffects(cfActor);
+}
+
+async function _saveCrossfadeState(cfActor) {
+  const combatant = game.combat?.combatants.find(c => c.actorId === cfActor.id && !c.defeated);
+  if (!combatant) return;
+  await combatant.update({
+    [`flags.${M}.crossfadePrevStrikes`]: [...previousTurnStrikes],
+    [`flags.${M}.crossfadeCurrStrikes`]: [...currentTurnStrikes],
+  });
+}
+
+function _saveCurrStrikes(cfActor) {
+  const combatant = game.combat?.combatants.find(c => c.actorId === cfActor.id && !c.defeated);
+  if (!combatant) return;
+  const data = { [`flags.${M}.crossfadeCurrStrikes`]: [...currentTurnStrikes] };
+  if (game.user.isGM) combatant.update(data).catch(() => {});
+  else game.modules.get(M).api.socket?.executeAsGM('dsct.updateDocument', combatant.uuid, data);
+}
+
+async function _syncCfEffects(actor) {
+  for (const type of ['melee', 'ranged']) {
+    const eligible = !previousTurnStrikes.has(type);
+    const existing = _getCfEffect(actor, type);
+    if (eligible && !existing) await actor.createEmbeddedDocuments('ActiveEffect', [CF_EFFECT_DEFS[type]]);
+    else if (!eligible && existing) await existing.delete();
+  }
+}
+
 export function getStrikeType(item) {
   const kw = item.system?.keywords;
   if (!kw?.has('strike')) return null;
@@ -14,6 +76,27 @@ export function getStrikeType(item) {
   if (melee)  return 'melee';
   if (ranged) return 'ranged';
   return null;
+}
+
+export function isCrossfadeStrike(ability) {
+  if (!getSetting('crossfadeEnabled')) return false;
+  const actor = ability.actor ?? ability.parent;
+  if (!actor) return false;
+  const cfActor = findCrossfadeActor();
+  if (!cfActor || actor.id !== cfActor.id) return false;
+  return getStrikeType(ability) !== null;
+}
+
+export function getCrossfadeEdgeForAbility(ability) {
+  if (!getSetting('crossfadeEnabled')) return null;
+  const actor = ability.actor ?? ability.parent;
+  if (!actor) return null;
+  const cfActor = findCrossfadeActor();
+  if (!cfActor || actor.id !== cfActor.id) return null;
+  const strikeType = getStrikeType(ability);
+  if (!strikeType) return null;
+  if (previousTurnStrikes.has(strikeType) || currentTurnStrikes.has(strikeType)) return null;
+  return strikeType;
 }
 
 function findCrossfadeActor() {
@@ -36,7 +119,10 @@ function distanceToAnyTarget(sourceToken) {
 
 export const registerCrossfadeHooks = () => {
   if (!getSetting('abilityAutomationEnabled')) return;
-  Hooks.on('combatTurnChange', (combat) => {
+
+  Hooks.on('canvasReady', _hydrateCrossfadeState);
+
+  Hooks.on('combatTurnChange', async (combat) => {
     if (!getSetting('crossfadeEnabled')) return;
     const actor = findCrossfadeActor();
     if (!actor) return;
@@ -44,55 +130,55 @@ export const registerCrossfadeHooks = () => {
     previousTurnStrikes = new Set(currentTurnStrikes);
     currentTurnStrikes  = new Set();
     if (getSetting('debugMode')) console.log('DSCT | Crossfade | Turn started. previous:', [...previousTurnStrikes]);
+    if (!game.users.activeGM?.isSelf) return;
+    await _syncCfEffects(actor);
+    await _saveCrossfadeState(actor);
+  });
+
+  Hooks.on('deleteCombat', async () => {
+    if (!game.users.activeGM?.isSelf) return;
+    const actor = findCrossfadeActor();
+    if (!actor) return;
+    for (const type of ['melee', 'ranged']) {
+      const effect = _getCfEffect(actor, type);
+      if (effect) await effect.delete();
+    }
+    previousTurnStrikes = new Set();
+    currentTurnStrikes  = new Set();
   });
 
   Hooks.on('renderAbilityConfigurationDialog', (app, _html, _data) => {
     if (!getSetting('crossfadeEnabled')) return;
-
     const item = app.options.ability ?? app.item;
     if (!item) return;
-
-    const actor   = item.actor ?? item.parent;
+    const actor = item.actor ?? item.parent;
     if (!actor) return;
-
     const cfActor = findCrossfadeActor();
     if (!cfActor || actor.id !== cfActor.id) return;
-
     const strikeType = getStrikeType(item);
     if (!strikeType) return;
 
-    const eligible = !previousTurnStrikes.has(strikeType) && !currentTurnStrikes.has(strikeType);
-    if (getSetting('debugMode')) console.log(`DSCT | Crossfade | ${item.name}: type=${strikeType}, eligible=${eligible}, prev=[${[...previousTurnStrikes]}], curr=[${[...currentTurnStrikes]}]`);
-
-    if (eligible && !app._dsctCrossfadeApplied) {
-      app._dsctCrossfadeApplied = true;
-      app.options.context.modifiers.edges = (app.options.context.modifiers.edges ?? 0) + 1;
-      app.render();
-      return;
-    }
-
     const el = app.element instanceof HTMLElement ? app.element : app.element?.[0];
     if (!el) return;
-
-    if (app._dsctCrossfadeApplied) {
-      const edgeSel = el.querySelector('select[name="modifiers.edges"]');
-      if (edgeSel && !el.querySelector('.dsct-crossfade-hint')) {
-        const notice = document.createElement('p');
-        notice.className = 'hint dsct-crossfade-hint';
-        notice.innerHTML = '<i class="fa-solid fa-shuffle"></i> Crossfade: edge added';
-        edgeSel.closest('.form-group')?.after(notice);
-      }
-    }
-
     const rollBtn = el.querySelector('button:not([data-action])');
-    if (!rollBtn) return;
+    if (!rollBtn || rollBtn._dsctCfAttached) return;
 
+    rollBtn._dsctCfAttached = true;
     rollBtn.addEventListener('click', () => {
+      const cfPill      = app._dsctSources?.find(p => p.reason === 'Crossfade' && p.scope === 'global');
+      const wasEligible = !previousTurnStrikes.has(strikeType) && !currentTurnStrikes.has(strikeType);
+      const shouldFire  = cfPill ? cfPill.enabled : wasEligible;
       currentTurnStrikes.add(strikeType);
+      _saveCurrStrikes(cfActor);
 
-      const mod     = app.options.context?.modifiers ?? {};
-      const netEdge = (mod.edges ?? 0) - (mod.banes ?? 0);
-      if (netEdge <= 0) return;
+      const cfEffect = _getCfEffect(cfActor, strikeType);
+      if (cfEffect) {
+        const api = game.modules.get(M).api;
+        if (game.user.isGM) cfEffect.delete().catch(() => {});
+        else api.socket?.executeAsGM('dsct.deleteDocument', cfEffect.uuid);
+      }
+
+      if (!shouldFire) return;
 
       const sourceToken = canvas.tokens.placeables.find(t => t.actor?.id === cfActor.id);
       let canDisengage  = false;

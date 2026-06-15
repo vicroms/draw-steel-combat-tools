@@ -1,7 +1,7 @@
 import { getSetting, getItemDsid } from '../helpers.mjs';
 import { getFrightenedData, getTauntedData, sightBlockedBetweenTokens } from '../conditions/conditions.mjs';
 import { sizeRankG } from '../conditions/grab.mjs';
-import { getStrikeType } from './class-shadow/crossfade.mjs';
+import { getStrikeType, isCrossfadeStrike, getCrossfadeEdgeForAbility } from './class-shadow/crossfade.mjs';
 
 let _pillIdCounter = 0;
 const mkId = (s) => `dsct-p-${++_pillIdCounter}-${s}`;
@@ -245,19 +245,11 @@ function _buildTargetPills(app, tokenId) {
   
   
   if (getSetting('highGroundEnabled') && casterToken) {
-    const dstdActive = !!game.modules.get('ds-terrain-designer')?.active;
-    if (_hasHighGround(casterToken, targetToken)) {
-      pills.push(pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, dstdActive));
-    } else if (dstdActive) {
-      const cElev = casterToken.document.elevation ?? 0;
-      const tElev = targetToken.document.elevation ?? 0;
-      const tSize = targetToken.actor?.system?.combat?.size?.value ?? 1;
-      if (cElev >= tElev + tSize) {
-        const p = pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, true);
-        p.enabled = false;
-        pills.push(p);
-      }
-    }
+    const dstdActive  = !!game.modules.get('ds-terrain-designer')?.active;
+    const hasHighGrnd = _hasHighGround(casterToken, targetToken);
+    const p = pill(mkId(`hg-${tokenId}`), 'edge', 1, 'High Ground', null, tokenId, hasHighGrnd && dstdActive);
+    p.enabled = hasHighGrnd;
+    pills.push(p);
   }
 
   return pills;
@@ -308,7 +300,12 @@ function _buildModifierSources(app) {
   }
 
   
-  
+  if (isCrossfadeStrike(ability)) {
+    const p = pill(mkId('cf'), 'edge', 1, 'Crossfade', null, 'global', false);
+    p.enabled = getCrossfadeEdgeForAbility(ability) !== null;
+    pills.push(p);
+  }
+
   if (getStrikeType(ability) === 'ranged' && casterToken && !(actor.system?.isMinion)) {
     const casterDisp = casterToken.document.disposition;
     const _dead = CONFIG.specialStatusEffects?.DEFEATED ?? 'dead';
