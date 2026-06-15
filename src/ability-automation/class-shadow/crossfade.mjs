@@ -1,4 +1,4 @@
-import { getSetting, getItemDsid } from '../helpers.mjs';
+import { getSetting, getItemDsid } from '../../helpers.mjs';
 
 const M = 'draw-steel-combat-tools';
 
@@ -64,12 +64,11 @@ export const registerCrossfadeHooks = () => {
     const eligible = !previousTurnStrikes.has(strikeType) && !currentTurnStrikes.has(strikeType);
     if (getSetting('debugMode')) console.log(`DSCT | Crossfade | ${item.name}: type=${strikeType}, eligible=${eligible}, prev=[${[...previousTurnStrikes]}], curr=[${[...currentTurnStrikes]}]`);
 
-    
     if (eligible && !app._dsctCrossfadeApplied) {
       app._dsctCrossfadeApplied = true;
       app.options.context.modifiers.edges = (app.options.context.modifiers.edges ?? 0) + 1;
       app.render();
-      return; 
+      return;
     }
 
     const el = app.element instanceof HTMLElement ? app.element : app.element?.[0];

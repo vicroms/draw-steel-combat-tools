@@ -1,7 +1,7 @@
 import { getSetting, getItemDsid } from '../helpers.mjs';
 import { getFrightenedData, getTauntedData, sightBlockedBetweenTokens } from '../conditions/conditions.mjs';
 import { sizeRankG } from '../conditions/grab.mjs';
-import { getStrikeType } from './crossfade.mjs';
+import { getStrikeType } from './class-shadow/crossfade.mjs';
 
 let _pillIdCounter = 0;
 const mkId = (s) => `dsct-p-${++_pillIdCounter}-${s}`;

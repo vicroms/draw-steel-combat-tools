@@ -1,8 +1,7 @@
-import { getSetting, getItemDsid } from '../helpers.mjs';
+import { getSetting, getItemDsid } from '../../helpers.mjs';
 
 const M   = 'draw-steel-combat-tools';
 const DBG = () => getSetting('debugMode');
-
 
 let hiwActivatedCombatantIds = new Set();
 
@@ -44,7 +43,6 @@ export const executeHIWTurn = async (actorUuid, msgId) => {
 
   await actor.update({ 'system.hero.primary.value': insight - 1 });
 
-  
   await combatant.update({ initiative: combatant.initiative - 1 });
   const newTurn = game.combat.turns.findIndex(c => c === combatant);
   if (newTurn >= 0) await game.combat.update({ turn: newTurn }, { direction: 1 });

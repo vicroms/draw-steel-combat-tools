@@ -1,5 +1,5 @@
-import { runTransform } from './transformation.mjs';
-import { getSetting, getModuleApi, monsterFilter as filter } from '../helpers.mjs';
+import { runTransform } from '../transformation.mjs';
+import { getSetting, getModuleApi, monsterFilter as filter } from '../../helpers.mjs';
 
 const M        = 'draw-steel-combat-tools';
 const _abyssal = filter.keyword('abyssal');

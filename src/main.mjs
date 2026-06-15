@@ -16,10 +16,10 @@ import { toggleDamageConditionsPanel } from './conditions/damage-conditions.mjs'
 import { applyFrightened, applyTaunted, registerConditionHooks } from './conditions/conditions.mjs';
 import { openImNoThreatPanel } from './ability-automation/ability-automation.mjs';
 import { openTransformPicker, runTransform } from './ability-automation/transformation.mjs';
-import { triggerAbyssalEvolution, registerMaliceInjectors } from './ability-automation/malice-features.mjs';
-import { registerCrossfadeHooks } from './ability-automation/crossfade.mjs';
+import { triggerAbyssalEvolution, registerMaliceInjectors } from './ability-automation/malice/malice-features.mjs';
+import { registerCrossfadeHooks } from './ability-automation/class-shadow/crossfade.mjs';
 import { registerSquadTargetingHooks } from './ability-automation/squad-targeting.mjs';
-import { executeHIWTurn, registerHIWHooks } from './ability-automation/hesitation.mjs';
+import { executeHIWTurn, registerHIWHooks } from './ability-automation/class-shadow/hesitation.mjs';
 import { registerDefeatedTokenVisibility } from './death-tracker/defeated-token-visibility.mjs';
 import { registerSettings, registerCompatibilityChecks } from './settings/register-settings.mjs';
 import { registerSystemPatches } from './system-patches.mjs';

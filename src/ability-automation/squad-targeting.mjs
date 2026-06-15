@@ -1,6 +1,6 @@
 import { getSetting, tokFootprintDist } from '../helpers.mjs';
 import { _getValidTargets, setFoundryTargets, _addPickerReticle, _removePickerReticle, _clearPickerReticles } from './target-picker.mjs';
-import { getStrikeType } from './crossfade.mjs';
+import { getStrikeType } from './class-shadow/crossfade.mjs';
 import { _recomputeAndSync, _injectPillUI } from './roll-dialog-hooks.mjs';
 
 const M = 'draw-steel-combat-tools';
