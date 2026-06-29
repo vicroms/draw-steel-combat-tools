@@ -1,6 +1,6 @@
 import { safeCreateEmbedded, safeDelete, getItemDsid, getSetting, normalizeCollection, getModuleApi } from '../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const AID_ATTACK_EFFECT = {
   name: 'Aid Attack (Target)',

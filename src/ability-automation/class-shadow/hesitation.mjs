@@ -1,6 +1,6 @@
 import { getSetting, getItemDsid } from '../../helpers.mjs';
 
-const M   = 'draw-steel-combat-tools';
+const M   = 'draw-steel-combat-tools-vicroms';
 const DBG = () => getSetting('debugMode');
 
 let hiwActivatedCombatantIds = new Set();

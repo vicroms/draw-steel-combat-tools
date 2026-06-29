@@ -324,7 +324,7 @@ const splitBlockWallsAtTile = async (gx, gy, blockTag) => {
       const docs = await canvas.scene.createEmbeddedDocuments('Wall', [{
         c: [cx1, cy1, cx2, cy2],
         ...baseData,
-        flags: { ...baseData.flags, 'draw-steel-combat-tools': { tags: newTags } },
+        flags: { ...baseData.flags, 'draw-steel-combat-tools-vicroms': { tags: newTags } },
         ...(segIds.length === 0 ? { move: 0 } : {}),
       }]);
       if (docs?.[0]) created.push(docs[0]);
@@ -362,7 +362,7 @@ const fixBlock = async (tile) => {
 
   const walls = getBlockWalls(blockTag);
   for (const wall of walls) {
-    const savedRestrict = wall.getFlag('draw-steel-combat-tools', 'originalRestrictions');
+    const savedRestrict = wall.getFlag('draw-steel-combat-tools-vicroms', 'originalRestrictions');
     const r = savedRestrict ?? restrict;
     await wall.update({ move: r.move, sight: r.sight, light: r.light, sound: r.sound });
     if (squaresBack > 0) {
@@ -428,9 +428,9 @@ const transmuteBlock = async (tile, newMaterial) => {
     if (oldMat) await removeTags(wall, [oldMat]);
     await addTags(wall, [newMaterial]);
     await wall.update({ move: restrict.move, sight: restrict.sight, light: restrict.light, sound: restrict.sound });
-    const saved = wall.getFlag('draw-steel-combat-tools', 'originalRestrictions');
+    const saved = wall.getFlag('draw-steel-combat-tools-vicroms', 'originalRestrictions');
     if (saved !== undefined) {
-      await wall.setFlag('draw-steel-combat-tools', 'originalRestrictions', { move: restrict.move, sight: restrict.sight, light: restrict.light, sound: restrict.sound });
+      await wall.setFlag('draw-steel-combat-tools-vicroms', 'originalRestrictions', { move: restrict.move, sight: restrict.sight, light: restrict.light, sound: restrict.sound });
     }
   }
 };
@@ -568,9 +568,9 @@ export const convertWalls = async (material = 'stone', heightBottom = '', height
 
     if (blockIds.length > 0) {
       if (retainRestrictions) {
-        await wall.setFlag('draw-steel-combat-tools', 'originalRestrictions', { move: wall.move, sight: wall.sight, light: wall.light, sound: wall.sound });
+        await wall.setFlag('draw-steel-combat-tools-vicroms', 'originalRestrictions', { move: wall.move, sight: wall.sight, light: wall.light, sound: wall.sound });
       } else {
-        await wall.unsetFlag('draw-steel-combat-tools', 'originalRestrictions');
+        await wall.unsetFlag('draw-steel-combat-tools-vicroms', 'originalRestrictions');
       }
       await addTags(wall, ['obstacle', 'breakable', material, 'wall-converted', ...new Set(blockIds)]);
       if (Object.keys(heightUpdate).length) await wall.update(heightUpdate);
@@ -1019,7 +1019,7 @@ const CUSTOM_MATERIAL_DEFAULTS = { cost: 3, damage: 5, alpha: 0.8, move: 20, sig
 const DEFAULT_ICON = 'icons/commodities/stone/paver-brick-brown.webp';
 
 const RESTRICT_LABELS = { 0: 'None', 10: 'Limited', 20: 'Blocked' };
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const restrictSelect = (fieldName, currentVal, values = [0, 10, 20]) =>
   `<select name="${fieldName}" class="dsct-wb-restrict-select">${

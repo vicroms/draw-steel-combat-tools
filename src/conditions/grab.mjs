@@ -4,7 +4,7 @@ import { checkAndRunTargetPicker, runSourcePicker, runMultiTokenPicker } from '.
 import { checkAndRunSquadTargeting } from '../ability-automation/squad-targeting.mjs';
 import { isNullGrabIntuitionActive, nullIntuitionScore, isNullSpeedExemptActive } from '../ability-automation/class-null/psionic-martial-arts.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const TIMEOUT_MS = 60_000;
 

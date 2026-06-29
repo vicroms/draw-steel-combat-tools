@@ -5,7 +5,7 @@ import {
 import { applyFrightened, applyTaunted } from './conditions.mjs';
 import { runSourcePicker, runMultiTokenPicker, setFoundryTargets } from '../ability-automation/target-picker.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const DAMAGE_TYPES = [
   'untyped', 'fire', 'cold', 'lightning', 'sonic',

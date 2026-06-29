@@ -3,7 +3,7 @@
   "name": "DSCT: Clear Squad Labels",
   "type": "script",
   "img": "icons/environment/people/group.webp",
-  "command": "await game.modules.get('draw-steel-combat-tools').api.clearSquadLabels();",
+  "command": "await game.modules.get('draw-steel-combat-tools-vicroms').api.clearSquadLabels();",
   "scope": "global",
   "sort": 1250,
   "folder": "DSCTfoldSL000001",

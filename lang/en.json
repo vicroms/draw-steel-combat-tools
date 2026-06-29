@@ -1188,10 +1188,10 @@
   },
   "TYPES": {
     "RegionBehavior": {
-      "draw-steel-combat-tools.statusEffect": "[DSCT] Status Effect",
-      "draw-steel-combat-tools.statusEffectEvents": "[DSCT] Status Effect (Events)",
-      "draw-steel-combat-tools.activeEffect": "[DSCT] Active Effect",
-      "draw-steel-combat-tools.activeEffectEvents": "[DSCT] Active Effect (Events)"
+      "draw-steel-combat-tools-vicroms.statusEffect": "[DSCT] Status Effect",
+      "draw-steel-combat-tools-vicroms.statusEffectEvents": "[DSCT] Status Effect (Events)",
+      "draw-steel-combat-tools-vicroms.activeEffect": "[DSCT] Active Effect",
+      "draw-steel-combat-tools-vicroms.activeEffectEvents": "[DSCT] Active Effect (Events)"
     }
   }
 }

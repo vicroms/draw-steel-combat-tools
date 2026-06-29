@@ -1,7 +1,7 @@
-﻿import { getSetting, monsterFilter as filter } from './helpers.mjs';
+import { getSetting, monsterFilter as filter } from './helpers.mjs';
 import { runColoredTokenPicker } from './ability-automation/target-picker.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const BAR_W  = 112;
 const BAR_H  = 10;

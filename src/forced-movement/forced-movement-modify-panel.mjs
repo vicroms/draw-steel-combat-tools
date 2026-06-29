@@ -45,8 +45,8 @@ export const persistStack = (msgEl, stack) => {
   if (!msg) return;
   const stackData = stack.map(e => ({ modState: e.modState, noteName: e.noteName, noteDesc: e.noteDesc }));
   const api = getModuleApi();
-  if (api?.socket) api.socket.executeAsGM('dsct.updateDocument', msg.uuid, { 'flags.draw-steel-combat-tools.fmModifiers': stackData });
-  else msg.setFlag('draw-steel-combat-tools', 'fmModifiers', stackData);
+  if (api?.socket) api.socket.executeAsGM('dsct.updateDocument', msg.uuid, { 'flags.draw-steel-combat-tools-vicroms.fmModifiers': stackData });
+  else msg.setFlag('draw-steel-combat-tools-vicroms', 'fmModifiers', stackData);
 };
 
 const _buildModTooltip = (entry, baseStates) => {

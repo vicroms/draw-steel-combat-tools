@@ -2,7 +2,7 @@ import { ImNoThreatSettingsMenu } from '../ability-automation/ability-automation
 import { WallBuilderSettingsMenu } from '../forced-movement/wall-builder.mjs';
 import { getSetting } from '../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 class SettingsSubmenu extends ds.applications.api.DSApplication {
   static DEFAULT_OPTIONS = {

@@ -7,6 +7,8 @@
 
 A Foundry VTT module for the Draw Steel system that automates and streamlines the combat mechanics of Draw Steel. Each feature is individually toggleable, so you can use as much or as little as fits your table.
 
+**Grid support:** square and hexagonal maps.
+
 **Requires Foundry v14 and the Draw Steel system.**
 
 ---

@@ -2,7 +2,7 @@ import {
   safeCreateEmbedded, safeDelete, getSetting, getTokenById, footprintDistFromBounds,
 } from '../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 
 const resolveEffectEnd = (endStr) => {

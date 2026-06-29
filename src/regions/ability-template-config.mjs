@@ -1,6 +1,6 @@
 import { getModuleApi, safeDelete } from '../helpers.mjs';
 
-const M  = 'draw-steel-combat-tools';
+const M  = 'draw-steel-combat-tools-vicroms';
 const DS = 'draw-steel';
 
 

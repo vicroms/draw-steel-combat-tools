@@ -1,5 +1,6 @@
 import {
   hasTags, GRID as getGRID, toGrid, toWorld, gridDist,
+  gridCellsWithinDistance,
   tokenAt, tileAt, safeUpdate, replayUndo, getWallBlockTop,
   applyDamage, safeToggleStatusEffect, getSetting, canCurrentlyFly, applyFall, snapStamina,
   getTokenById, getWindowById, pickCanvasTarget, confirmFall,
@@ -9,7 +10,6 @@ import { runSourcePicker } from './ability-automation/target-picker.mjs';
 
 
 const chooseTeleportSquare = (sourceToken, maxDist) => new Promise((resolve) => {
-  const GRID    = getGRID();
   const w       = sourceToken.document.width ?? 1;
   const h       = sourceToken.document.height ?? 1;
   const tg      = toGrid(sourceToken.document);
@@ -88,17 +88,10 @@ const chooseTeleportSquare = (sourceToken, maxDist) => new Promise((resolve) => 
   };
 
   const candidates = [];
-  for (let dx = -maxDist; dx <= maxDist; dx++) {
-    for (let dy = -maxDist; dy <= maxDist; dy++) {
-      if (dx === 0 && dy === 0) continue;
-      const dist = Math.max(Math.abs(dx), Math.abs(dy));
-      if (dist > maxDist) continue;
-      const x = tg.x + dx;
-      const y = tg.y + dy;
-      const area = checkArea(x, y);
-      if (area.free) {
-        candidates.push({ x, y, isOnTerrain: area.isOnTerrain, targetElev: area.targetElev, willFall: area.willFall, arrivalElev: area.arrivalElev });
-      }
+  for (const g of gridCellsWithinDistance(tg, maxDist, { excludeOrigin: true })) {
+    const area = checkArea(g.x, g.y);
+    if (area.free) {
+      candidates.push({ x: g.x, y: g.y, isOnTerrain: area.isOnTerrain, targetElev: area.targetElev, willFall: area.willFall, arrivalElev: area.arrivalElev });
     }
   }
 
@@ -108,11 +101,12 @@ const chooseTeleportSquare = (sourceToken, maxDist) => new Promise((resolve) => 
       return;
   }
 
-  const graphics = new PIXI.Graphics();
-  canvas.app.stage.addChild(graphics);
+  const hlName = 'dsct-teleport-picker-hl';
+  if (canvas.interface.grid.highlightLayers[hlName]) canvas.interface.grid.destroyHighlightLayer(hlName);
+  canvas.interface.grid.addHighlightLayer(hlName);
 
   const redraw = (hoverGrid) => {
-    graphics.clear();
+    canvas.interface.grid.clearHighlightLayer(hlName);
 
     const rangeCells  = new Map();
     for (const g of candidates) {
@@ -127,16 +121,22 @@ const chooseTeleportSquare = (sourceToken, maxDist) => new Promise((resolve) => 
 
     for (const [key, onTerrain] of rangeCells) {
       const [cx, cy] = key.split(',').map(Number);
-      graphics.beginFill(onTerrain ? 0x00d4ff : 0xaa33ff, 0.2);
-      graphics.drawRect(cx * GRID, cy * GRID, GRID, GRID);
-      graphics.endFill();
+      const topLeft = toWorld({ x: cx, y: cy });
+      canvas.interface.grid.highlightPosition(hlName, {
+        x: topLeft.x, y: topLeft.y,
+        color: onTerrain ? 0x00d4ff : 0xaa33ff,
+        border: onTerrain ? 0x0088bb : 0x661f99,
+      });
     }
 
     if (hoverGrid) {
       const color = hoverGrid.isOnTerrain ? 0x00d4ff : 0xaa33ff;
-      graphics.beginFill(color, 0.5);
-      graphics.drawRect(hoverGrid.x * GRID, hoverGrid.y * GRID, GRID * w, GRID * h);
-      graphics.endFill();
+      for (let ix = 0; ix < w; ix++) {
+        for (let iy = 0; iy < h; iy++) {
+          const topLeft = toWorld({ x: hoverGrid.x + ix, y: hoverGrid.y + iy });
+          canvas.interface.grid.highlightPosition(hlName, { x: topLeft.x, y: topLeft.y, color, border: 0xffffff });
+        }
+      }
     }
   };
 
@@ -179,9 +179,8 @@ const chooseTeleportSquare = (sourceToken, maxDist) => new Promise((resolve) => 
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('contextmenu', onContextMenu);
     canvas.app.stage.removeChild(overlay);
-    canvas.app.stage.removeChild(graphics);
-    graphics.destroy();
     overlay.destroy();
+    canvas.interface.grid.destroyHighlightLayer(hlName);
     if (tpNotif) { ui.notifications.remove(tpNotif); tpNotif = null; }
   };
 
@@ -259,14 +258,14 @@ const executeTeleport = async (token, distance, animate, colorHex, animDuration 
        await new Promise(r => setTimeout(r, animDuration));
    }
 
-   const oldMoveId = token.document.getFlag('draw-steel-combat-tools', 'lastTpMoveId');
+   const oldMoveId = token.document.getFlag('draw-steel-combat-tools-vicroms', 'lastTpMoveId');
    if (oldMoveId) {
-     const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools', 'moveId') === oldMoveId);
-     if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools.isExpired': true });
+     const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools-vicroms', 'moveId') === oldMoveId);
+     if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools-vicroms.isExpired': true });
    }
 
    const moveId = foundry.utils.randomID();
-   await safeUpdate(token.document, { 'flags.draw-steel-combat-tools.lastTpMoveId': moveId });
+   await safeUpdate(token.document, { 'flags.draw-steel-combat-tools-vicroms.lastTpMoveId': moveId });
 
    const undoLog = [];
 
@@ -303,7 +302,7 @@ const executeTeleport = async (token, distance, animate, colorHex, animDuration 
    await ChatMessage.create({
        content: game.i18n.format('DSCT.chat.tp.teleported', { name: token.name, dist: actualDist, s: actualDist !== 1 ? 's' : '' }) + `${elevNote}.${fallNote}`,
        flags: {
-           'draw-steel-combat-tools': {
+           'draw-steel-combat-tools-vicroms': {
                isTpUndo: true, isUndone: false, undoLog, moveId,
                targetTokenId: token.id, targetSceneId: canvas.scene.id, finalPos: targetWorld,
                grabsToRestore: removedGrabs,
@@ -379,7 +378,7 @@ export class TeleportPanel extends ds.applications.api.DSApplication {
     this._updatePreview();
     const sourceSrc   = this._sourceToken?.document.texture.src ?? 'icons/svg/mystery-man.svg';
     const sourceLabel = this._sourceToken?.name ?? 'Select exactly 1 token';
-    const saved = game.user.getFlag('draw-steel-combat-tools', 'tpSettings') ?? { dist: 5, anim: true, color: '#a030ff', duration: 600 };
+    const saved = game.user.getFlag('draw-steel-combat-tools-vicroms', 'tpSettings') ?? { dist: 5, anim: true, color: '#a030ff', duration: 600 };
     return {
       sourceSrc,
       sourceLabel,
@@ -396,7 +395,7 @@ export class TeleportPanel extends ds.applications.api.DSApplication {
     const anim     = this.element.querySelector('#tp-anim')?.checked;
     const color    = this.element.querySelector('#tp-color')?.value || '#a030ff';
     const duration = parseInt(this.element.querySelector('#tp-duration')?.value) || 600;
-    await game.user.setFlag('draw-steel-combat-tools', 'tpSettings', { dist, anim, color, duration });
+    await game.user.setFlag('draw-steel-combat-tools-vicroms', 'tpSettings', { dist, anim, color, duration });
   }
 
   static async _onExecuteTp(event) {
@@ -491,9 +490,14 @@ const burstCells = (tok, radius) => {
   const w  = tok.document.width  ?? 1;
   const h  = tok.document.height ?? 1;
   const cells = new Set();
-  for (let dx = -radius; dx < w + radius; dx++)
-    for (let dy = -radius; dy < h + radius; dy++)
-      cells.add(`${tg.x + dx},${tg.y + dy}`);
+  for (let ix = 0; ix < w; ix++) {
+    for (let iy = 0; iy < h; iy++) {
+      const origin = { x: tg.x + ix, y: tg.y + iy };
+      for (const c of gridCellsWithinDistance(origin, radius)) {
+        cells.add(`${c.x},${c.y}`);
+      }
+    }
+  }
   return cells;
 };
 
@@ -678,7 +682,7 @@ export const registerTeleportHooks = () => {
 
       a.addEventListener('click', async (e) => {
         e.preventDefault();
-        const saved  = game.user.getFlag('draw-steel-combat-tools', 'tpSettings') ?? { dist: 5, anim: true, color: '#a030ff', duration: 600 };
+        const saved  = game.user.getFlag('draw-steel-combat-tools-vicroms', 'tpSettings') ?? { dist: 5, anim: true, color: '#a030ff', duration: 600 };
         const fDist  = parseInt(a.dataset.dist)     || saved.dist;
         const fAnim  = a.dataset.animate  !== undefined ? a.dataset.animate === 'true' : (saved.anim     ?? true);
         const fColor = a.dataset.color    ?? saved.color   ?? '#a030ff';
@@ -779,21 +783,21 @@ export const registerTeleportHooks = () => {
   });
 
   Hooks.on('renderChatMessageHTML', (msg, el) => {
-    if (!msg.getFlag('draw-steel-combat-tools', 'isTpUndo')) return;
+    if (!msg.getFlag('draw-steel-combat-tools-vicroms', 'isTpUndo')) return;
 
-    const isUndone   = msg.getFlag('draw-steel-combat-tools', 'isUndone');
-    const moveId     = msg.getFlag('draw-steel-combat-tools', 'moveId');
-    const targetId   = msg.getFlag('draw-steel-combat-tools', 'targetTokenId');
-    const sceneId    = msg.getFlag('draw-steel-combat-tools', 'targetSceneId');
-    const finalPos   = msg.getFlag('draw-steel-combat-tools', 'finalPos');
+    const isUndone   = msg.getFlag('draw-steel-combat-tools-vicroms', 'isUndone');
+    const moveId     = msg.getFlag('draw-steel-combat-tools-vicroms', 'moveId');
+    const targetId   = msg.getFlag('draw-steel-combat-tools-vicroms', 'targetTokenId');
+    const sceneId    = msg.getFlag('draw-steel-combat-tools-vicroms', 'targetSceneId');
+    const finalPos   = msg.getFlag('draw-steel-combat-tools-vicroms', 'finalPos');
 
-    let isExpired = getSetting('undoExpirationCheck') ? (msg.getFlag('draw-steel-combat-tools', 'isExpired') ?? false) : false;
+    let isExpired = getSetting('undoExpirationCheck') ? (msg.getFlag('draw-steel-combat-tools-vicroms', 'isExpired') ?? false) : false;
 
     if (!isExpired && getSetting('undoExpirationCheck')) {
       if (canvas.scene?.id === sceneId) {
         const token = canvas.scene.tokens.get(targetId);
         if (token) {
-          const lastMoveId = token.getFlag('draw-steel-combat-tools', 'lastTpMoveId');
+          const lastMoveId = token.getFlag('draw-steel-combat-tools-vicroms', 'lastTpMoveId');
           if (lastMoveId && lastMoveId !== moveId) {
             isExpired = true;
           } else if (finalPos) {
@@ -837,22 +841,22 @@ export const registerTeleportHooks = () => {
         const token = canvas.scene.tokens.get(targetId);
         if (token && finalPos) {
           const isDead = token.actor?.statuses?.has('dead') || token.hidden;
-          const lastMoveId = token.getFlag('draw-steel-combat-tools', 'lastTpMoveId');
+          const lastMoveId = token.getFlag('draw-steel-combat-tools-vicroms', 'lastTpMoveId');
           if (getSetting('undoExpirationCheck') && ((lastMoveId && lastMoveId !== moveId) || (!isDead && (token.x !== finalPos.x || token.y !== finalPos.y || (token.elevation ?? 0) !== finalPos.elevation)))) {
             ui.notifications.warn(game.i18n.localize('DSCT.notice.tp.undoExpiredMoved'));
-            await safeUpdate(msg, { 'flags.draw-steel-combat-tools.isExpired': true });
+            await safeUpdate(msg, { 'flags.draw-steel-combat-tools-vicroms.isExpired': true });
             return;
           }
         } else if (!token && getSetting('undoExpirationCheck')) {
           ui.notifications.warn(game.i18n.localize('DSCT.notice.tp.undoExpiredGone'));
-          await safeUpdate(msg, { 'flags.draw-steel-combat-tools.isExpired': true });
+          await safeUpdate(msg, { 'flags.draw-steel-combat-tools-vicroms.isExpired': true });
           return;
         }
-        const undoLog = msg.getFlag('draw-steel-combat-tools', 'undoLog');
+        const undoLog = msg.getFlag('draw-steel-combat-tools-vicroms', 'undoLog');
         if (undoLog) {
-          await safeUpdate(msg, { 'flags.draw-steel-combat-tools.isUndone': true });
+          await safeUpdate(msg, { 'flags.draw-steel-combat-tools-vicroms.isUndone': true });
           await replayUndo(undoLog);
-          const grabsToRestore = msg.getFlag('draw-steel-combat-tools', 'grabsToRestore') ?? [];
+          const grabsToRestore = msg.getFlag('draw-steel-combat-tools-vicroms', 'grabsToRestore') ?? [];
           for (const { grabberTokenId, grabbedTokenId } of grabsToRestore) {
             const grabberTok = getTokenById(grabberTokenId);
             const grabbedTok = getTokenById(grabbedTokenId);

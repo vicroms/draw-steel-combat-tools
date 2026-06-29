@@ -3,7 +3,7 @@
   "name": "DSCT: Raise Dead",
   "type": "script",
   "img": "icons/magic/life/ankh-shadow-green.webp",
-  "command": "// Opens the Raise Dead UI.\n// Click defeated creatures to select them, then press Enter to revive. Right-click or Escape to cancel.\ngame.modules.get('draw-steel-combat-tools').api.raiseDead();",
+  "command": "// Opens the Raise Dead UI.\n// Click defeated creatures to select them, then press Enter to revive. Right-click or Escape to cancel.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.raiseDead();",
   "scope": "global",
   "sort": 550,
   "folder": "DSCTfoldDT000001",

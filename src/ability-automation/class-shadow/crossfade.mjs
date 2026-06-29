@@ -1,6 +1,6 @@
 import { getSetting, getItemDsid } from '../../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 let previousTurnStrikes = new Set();
 let currentTurnStrikes  = new Set();

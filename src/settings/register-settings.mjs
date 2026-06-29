@@ -14,7 +14,7 @@ import {
 } from './settings-menus.mjs';
 
 export const registerSettings = () => {
-  const M = 'draw-steel-combat-tools';
+  const M = 'draw-steel-combat-tools-vicroms';
   const L = (key) => game.i18n.localize(`DSCT.setting.${key}`);
   const reloadOnChange = { onChange: () => SettingsConfig.reloadConfirm({ world: true }) };
 
@@ -607,7 +607,7 @@ export const registerSettings = () => {
   });
 };
 
-const _DSCT = 'draw-steel-combat-tools';
+const _DSCT = 'draw-steel-combat-tools-vicroms';
 const _DSCT_KEY = 'overrideMinionDefeat';
 const _DSCT_CT = 'draw-steel-target-damage';
 const _DSCT_CT_KEY = 'minionDamageAutomation';

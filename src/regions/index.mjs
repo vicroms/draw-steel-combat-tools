@@ -12,7 +12,7 @@ Hooks.once('init', () => {
 
 
 Hooks.once('socketlib.ready', () => {
-  const socket = game.modules.get('draw-steel-combat-tools').api?.socket;
+  const socket = game.modules.get('draw-steel-combat-tools-vicroms').api?.socket;
   if (!socket) return;
   socket.register('dsct.createTemplateRegion', async (sceneUuid, createData, tokenId, userId) => {
     const scene = await fromUuid(sceneUuid);

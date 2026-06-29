@@ -342,7 +342,7 @@ export function registerSquadTurnHooks() {
   });
 
   if (typeof libWrapper !== 'undefined') {
-    libWrapper.register('draw-steel-combat-tools', 'Token.prototype._refreshPosition', function(wrapped, ...args) {
+    libWrapper.register('draw-steel-combat-tools-vicroms', 'Token.prototype._refreshPosition', function(wrapped, ...args) {
       wrapped(...args);
       if (this._dsctMarkerWrapper) {
         const { x, y } = this.document;
@@ -352,7 +352,7 @@ export function registerSquadTurnHooks() {
   }
 
   if (typeof libWrapper !== 'undefined') {
-    libWrapper.register('draw-steel-combat-tools', 'Token.prototype._refreshTurnMarker', function(wrapped, ...args) {
+    libWrapper.register('draw-steel-combat-tools-vicroms', 'Token.prototype._refreshTurnMarker', function(wrapped, ...args) {
       if (!game.combat) {
         _cleanupMarkerWrapper(this);
         return wrapped(...args);

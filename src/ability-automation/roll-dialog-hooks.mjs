@@ -609,7 +609,7 @@ function _updateTotalSpan(fg, scope, kind, val) {
 }
 
 
-const M_ID = 'draw-steel-combat-tools';
+const M_ID = 'draw-steel-combat-tools-vicroms';
 
 class DSCTAddModifierDialog extends ds.applications.api.DSApplication {
   static DEFAULT_OPTIONS = {
@@ -802,11 +802,11 @@ export function injectJudgementBanePill(app) {
 
   const ability = app.options.ability;
   const actor   = ability?.actor ?? ability?.parent;
-  const judgeEffect = actor?.effects?.find(e => e.getFlag('draw-steel-combat-tools', 'judgement')?.userId);
+  const judgeEffect = actor?.effects?.find(e => e.getFlag('draw-steel-combat-tools-vicroms', 'judgement')?.userId);
   let censorName = null;
   let srcTokenId    = null;
   if (judgeEffect) {
-    const flag   = judgeEffect.getFlag('draw-steel-combat-tools', 'judgement');
+    const flag   = judgeEffect.getFlag('draw-steel-combat-tools-vicroms', 'judgement');
     const cActor = (flag?.actorId ? game.actors.get(flag.actorId) : null)
                 ?? game.users.get(flag?.userId)?.character;
     censorName = cActor?.name ?? null;

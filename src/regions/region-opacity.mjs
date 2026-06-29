@@ -1,4 +1,4 @@
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 function _injectOpacityUI(app, html) {
   const root = html instanceof HTMLElement ? html : html[0];

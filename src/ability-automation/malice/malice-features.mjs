@@ -1,7 +1,7 @@
 import { runTransform } from '../transformation.mjs';
 import { getSetting, getModuleApi, monsterFilter as filter } from '../../helpers.mjs';
 
-const M        = 'draw-steel-combat-tools';
+const M        = 'draw-steel-combat-tools-vicroms';
 const _abyssal = filter.keyword('abyssal');
 const _minion  = filter.organization('minion');
 const _horde   = filter.organization('horde');

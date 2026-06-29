@@ -3,7 +3,7 @@
   "name": "DSCT: Grab (Direct)",
   "type": "script",
   "img": "icons/skills/melee/hand-grip-sword-orange.webp",
-  "command": "// Initiates a grab between two tokens programmatically.\n// Control one token (the grabber) and target one token (the target).\nconst grabber = canvas.tokens.controlled[0];\nconst target  = [...game.user.targets][0];\nif (!grabber || !target) {\n  ui.notifications.warn('Select one token (grabber) and target one token.');\n} else {\n  await game.modules.get('draw-steel-combat-tools').api.grab(grabber, target);\n}",
+  "command": "// Initiates a grab between two tokens programmatically.\n// Control one token (the grabber) and target one token (the target).\nconst grabber = canvas.tokens.controlled[0];\nconst target  = [...game.user.targets][0];\nif (!grabber || !target) {\n  ui.notifications.warn('Select one token (grabber) and target one token.');\n} else {\n  await game.modules.get('draw-steel-combat-tools-vicroms').api.grab(grabber, target);\n}",
   "scope": "global",
   "sort": 300,
   "folder": "DSCTfoldCond0001",

@@ -1,9 +1,9 @@
-import { getSetting, tokFootprintDist } from '../helpers.mjs';
+import { getSetting, tokFootprintDist, toGrid, toWorld, gridCellsWithinDistance } from '../helpers.mjs';
 import { _getValidTargets, setFoundryTargets, _addPickerReticle, _removePickerReticle, _clearPickerReticles } from './target-picker.mjs';
 import { getStrikeType } from './class-shadow/crossfade.mjs';
 import { _recomputeAndSync, _injectPillUI } from './roll-dialog-hooks.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const _squadTargeted = new Set();
 
@@ -346,18 +346,25 @@ async function _runSquadTargetingUI(eligibleMinions, allTargets, range, isRanged
   };
 
   const _highlightRangeCells = (token, r) => {
-    const cx0 = Math.floor(token.x / GS);
-    const cy0 = Math.floor(token.y / GS);
+    const tg  = toGrid(token.document);
     const cw  = Math.max(1, Math.round(token.document.width));
     const ch  = Math.max(1, Math.round(token.document.height));
-    for (let rx = cx0 - r; rx <= cx0 + cw - 1 + r; rx++) {
-      for (let ry = cy0 - r; ry <= cy0 + ch - 1 + r; ry++) {
-        if (rx >= cx0 && rx < cx0 + cw && ry >= cy0 && ry < cy0 + ch) continue;
-        const dx = Math.max(0, cx0 - rx, rx - (cx0 + cw - 1));
-        const dy = Math.max(0, cy0 - ry, ry - (cy0 + ch - 1));
-        if (Math.max(dx, dy) > r) continue;
-        canvas.interface.grid.highlightPosition(hlName, { x: rx * GS, y: ry * GS, color: 0x002211, border: 0x00CC66 });
+    const occupied = new Set();
+    const rangeCells = new Set();
+    for (let ix = 0; ix < cw; ix++) {
+      for (let iy = 0; iy < ch; iy++) {
+        const origin = { x: tg.x + ix, y: tg.y + iy };
+        occupied.add(`${origin.x},${origin.y}`);
+        for (const c of gridCellsWithinDistance(origin, r)) {
+          rangeCells.add(`${c.x},${c.y}`);
+        }
       }
+    }
+    for (const key of rangeCells) {
+      if (occupied.has(key)) continue;
+      const [x, y] = key.split(',').map(Number);
+      const topLeft = toWorld({ x, y });
+      canvas.interface.grid.highlightPosition(hlName, { x: topLeft.x, y: topLeft.y, color: 0x002211, border: 0x00CC66 });
     }
   };
 
@@ -382,11 +389,13 @@ async function _runSquadTargetingUI(eligibleMinions, allTargets, range, isRanged
       const border = atCap ? 0x440000 : 0x2244AA;
       const w = Math.max(1, Math.round(t.document.width));
       const h = Math.max(1, Math.round(t.document.height));
+      const tg = toGrid(t.document);
       for (let dx = 0; dx < w; dx++) {
         for (let dy = 0; dy < h; dy++) {
+          const topLeft = toWorld({ x: tg.x + dx, y: tg.y + dy });
           canvas.interface.grid.highlightPosition(hlName, {
-            x: Math.floor(t.x / GS) * GS + dx * GS,
-            y: Math.floor(t.y / GS) * GS + dy * GS,
+            x: topLeft.x,
+            y: topLeft.y,
             color, border,
           });
         }

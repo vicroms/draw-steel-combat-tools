@@ -3,7 +3,7 @@
   "name": "DSCT: Rename Squads",
   "type": "script",
   "img": "icons/environment/people/group.webp",
-  "command": "// Auto-renames all squad groups based on their current members.\n// Useful for keeping squad names tidy after adding or removing combatants mid-encounter.\nawait game.modules.get('draw-steel-combat-tools').api.renameSquads();",
+  "command": "// Auto-renames all squad groups based on their current members.\n// Useful for keeping squad names tidy after adding or removing combatants mid-encounter.\nawait game.modules.get('draw-steel-combat-tools-vicroms').api.renameSquads();",
   "scope": "global",
   "sort": 1300,
   "folder": "DSCTfoldSL000001",

@@ -72,7 +72,7 @@ const api = {
 };
 
 Hooks.once('init', () => {
-  game.modules.get('draw-steel-combat-tools').api = api;
+  game.modules.get('draw-steel-combat-tools-vicroms').api = api;
 
   initPalette();
   new MutationObserver(initPalette).observe(document.body, { attributeFilter: ['class'] });
@@ -104,7 +104,7 @@ Hooks.once('init', () => {
   registerHealthEstimateCompat();
   console.log('DSCT | Initialized');
 
-  game.keybindings.register('draw-steel-combat-tools', 'refreshChatInjections', {
+  game.keybindings.register('draw-steel-combat-tools-vicroms', 'refreshChatInjections', {
     name: 'Refresh Chat Forced Movement Buttons', hint: 'Re-injects Execute buttons into any chat messages that have forced movement data.',
     editable: [{ key: 'KeyR', modifiers: ['Shift'] }],
     onDown: () => { refreshChatInjections(); return true; },
@@ -203,7 +203,7 @@ Hooks.once('setup', () => {
 
 Hooks.once('ready', () => {
   if (!game.user.isGM) {
-    const M = 'draw-steel-combat-tools';
+    const M = 'draw-steel-combat-tools-vicroms';
     game.user.setFlag(M, 'cedeDeathPickerToGM', game.settings.get(M, 'cedeDeathPickerToGM'));
   }
 });
@@ -211,7 +211,7 @@ Hooks.once('ready', () => {
 Hooks.once('ready', async () => {
   if (!game.user.isGM) return;
 
-  const M              = 'draw-steel-combat-tools';
+  const M              = 'draw-steel-combat-tools-vicroms';
 
   if (!game.modules.get('draw-steel-target-damage')?.active && game.settings.get(M, 'squadTargetBonus')) {
     await game.settings.set(M, 'squadTargetBonus', false);
@@ -268,7 +268,7 @@ Hooks.once('ready', async () => {
 
 
 Hooks.once('socketlib.ready', () => {
-  const socket = socketlib.registerModule('draw-steel-combat-tools');
+  const socket = socketlib.registerModule('draw-steel-combat-tools-vicroms');
   api.socket = socket;
 
   socket.register('dsct.updateDocument',    async (uuid, data, options = {}) => { const doc = await fromUuid(uuid); if (doc) return await doc.update(data, options); });
@@ -295,7 +295,7 @@ Hooks.once('socketlib.ready', () => {
       poolTokenIds:   new Set(ctx.poolTokenIds),
     }));
     
-    if (!game.settings.get('draw-steel-combat-tools', 'pickDeathsEnabled')) {
+    if (!game.settings.get('draw-steel-combat-tools-vicroms', 'pickDeathsEnabled')) {
       const autoResult = [];
       for (const ctx of contexts) {
         for (const id of ctx.lockedIds)      autoResult.push(id);

@@ -2,16 +2,18 @@ name: Release Module
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 env:
-  MODULE_ID: draw-steel-combat-tools
-  FVTT_MINIMUM: "13"
-  FVTT_VERIFIED: "14"
+  MODULE_ID: draw-steel-combat-tools-vicroms
 
 jobs:
   release:
@@ -20,22 +22,60 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Extract version from tag
+      - name: Compute release version and tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          EXISTING_TAG="$(git tag --points-at HEAD 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n 1)"
+          if [ -n "$EXISTING_TAG" ]; then
+            VERSION="${EXISTING_TAG#v}"
+            SHOULD_CREATE_TAG=false
+          else
+            BASE_TAG="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n 1)"
+            if [ -n "$BASE_TAG" ]; then
+              BASE_VERSION="${BASE_TAG#v}"
+            else
+              BASE_VERSION="$(jq -r '.version' module.json)"
+            fi
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
+            if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
+              echo "::error::Cannot derive semantic version from '$BASE_VERSION'"
+              exit 1
+            fi
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            EXISTING_TAG="v${VERSION}"
+            SHOULD_CREATE_TAG=true
+          fi
 
-      - name: Update module.json with release info
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$EXISTING_TAG" >> "$GITHUB_OUTPUT"
+          echo "should_create_tag=$SHOULD_CREATE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        if: steps.version.outputs.should_create_tag == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Update module.json with release metadata
         run: |
           jq \
+            --arg moduleId "${{ env.MODULE_ID }}" \
             --arg version "${{ steps.version.outputs.version }}" \
-            --arg download "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.MODULE_ID }}.zip" \
-            '.version = $version | .download = $download | del(.documentTypes) | .esmodules = [.esmodules[] | select(. != "src/regions/index.mjs")]' \
+            --arg url "https://github.com/${{ github.repository }}" \
+            --arg manifest "https://github.com/${{ github.repository }}/releases/latest/download/module.json" \
+            --arg download "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.MODULE_ID }}.zip" \
+            '.id = $moduleId | .version = $version | .url = $url | .manifest = $manifest | .download = $download' \
             module.json > module.json.tmp && mv module.json.tmp module.json
 
       - name: Create module zip
         run: |
-          zip -r ${{ env.MODULE_ID }}.zip \
+          zip -r "${{ env.MODULE_ID }}.zip" \
             module.json \
             LICENSE \
             README.md \
@@ -44,38 +84,13 @@ jobs:
             lang/ \
             assets/ \
             templates/ \
-            packs/ \
-            -x 'src/regions/*'
+            packs/
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub release
         uses: ncipollo/release-action@v1
         with:
+          tag: "${{ steps.version.outputs.tag }}"
+          commit: "${{ github.sha }}"
           artifacts: "${{ env.MODULE_ID }}.zip,module.json"
           generateReleaseNotes: true
           allowUpdates: true
-
-      - name: Notify Foundry Package Release API
-        run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            "https://foundryvtt.com/_api/packages/release_version/" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: ${{ secrets.FOUNDRY_DRAW_STEEL_COMBAT_TOOLS_RELEASE_TOKEN }}" \
-            -d '{
-              "id": "${{ env.MODULE_ID }}",
-              "release": {
-                "version": "${{ steps.version.outputs.version }}",
-                "manifest": "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/module.json",
-                "notes": "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}",
-                "compatibility": {
-                  "minimum": "${{ env.FVTT_MINIMUM }}",
-                  "verified": "${{ env.FVTT_VERIFIED }}"
-                }
-              }
-            }')
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "Response ($HTTP_CODE): $BODY"
-          if [ "$HTTP_CODE" -ge 400 ]; then
-            echo "::error::Foundry API returned $HTTP_CODE"
-            exit 1
-          fi

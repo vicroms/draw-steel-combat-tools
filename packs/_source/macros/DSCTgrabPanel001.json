@@ -3,7 +3,7 @@
   "name": "DSCT: Grab Panel",
   "type": "script",
   "img": "icons/skills/melee/hand-grip-sword-orange.webp",
-  "command": "// Opens or closes the Grab panel.\n// Use the panel to initiate grabs, monitor active grabs, and release grabbed tokens.\ngame.modules.get('draw-steel-combat-tools').api.grabPanel();",
+  "command": "// Opens or closes the Grab panel.\n// Use the panel to initiate grabs, monitor active grabs, and release grabbed tokens.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.grabPanel();",
   "scope": "global",
   "sort": 200,
   "folder": "DSCTfoldCond0001",

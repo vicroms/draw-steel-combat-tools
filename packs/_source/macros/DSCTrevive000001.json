@@ -3,7 +3,7 @@
   "name": "DSCT: Revive All",
   "type": "script",
   "img": "icons/magic/life/heart-cross-strong-flame-green.webp",
-  "command": "// Revives all skull tokens on the canvas one by one. GM only.\ngame.modules.get('draw-steel-combat-tools').api.reviveAll();",
+  "command": "// Revives all skull tokens on the canvas one by one. GM only.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.reviveAll();",
   "scope": "global",
   "sort": 500,
   "folder": "DSCTfoldDT000001",

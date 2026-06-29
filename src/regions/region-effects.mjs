@@ -1,4 +1,4 @@
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 const L = 'DSCT'; 
 const { RegionBehaviorType } = foundry.data.regionBehaviors;
 const { BooleanField, DocumentUUIDField, NumberField, SetField, StringField } = foundry.data.fields;
