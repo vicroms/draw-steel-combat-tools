@@ -347,7 +347,7 @@ export class GrabPanel extends ds.applications.api.DSApplication {
     this._updatePreview();
   }
 
-  static PARTS = { form: { template: 'modules/draw-steel-combat-tools/templates/panels/grab.hbs' } };
+  static PARTS = { form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/grab.hbs' } };
 
   static DEFAULT_OPTIONS = {
     id: 'grab-panel',

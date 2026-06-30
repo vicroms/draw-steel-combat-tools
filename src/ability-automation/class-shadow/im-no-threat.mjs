@@ -65,7 +65,7 @@ class ImNoThreatPanel extends ds.applications.api.DSApplication {
   }
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/ability-automation.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/ability-automation.hbs' },
   };
 
   static DEFAULT_OPTIONS = {
@@ -564,7 +564,7 @@ export class ImNoThreatSettingsMenu extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/settings/ability-automation.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/settings/ability-automation.hbs' },
   };
 
   async _prepareContext(_options) {

@@ -917,7 +917,7 @@ export function getStickBugged() {
     _hudTicker = () => _tickHuds();
     canvas.app.ticker.add(_hudTicker);
   }
-  foundry.audio.AudioHelper.play({ src: 'modules/draw-steel-combat-tools/assets/Audio/Stickbug.mp3', volume: 0.8, loop: false }, false);
+  foundry.audio.AudioHelper.play({ src: 'modules/draw-steel-combat-tools-vicroms/assets/Audio/Stickbug.mp3', volume: 0.8, loop: false }, false);
 }
 
 

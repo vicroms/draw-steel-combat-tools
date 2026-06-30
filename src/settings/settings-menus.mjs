@@ -12,7 +12,7 @@ class SettingsSubmenu extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/settings/settings-submenu.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/settings/settings-submenu.hbs' },
   };
 
   static get regularKeys() { return []; }

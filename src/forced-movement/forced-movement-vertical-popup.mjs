@@ -21,7 +21,7 @@ export class VerticalDistancePopup extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/forced-movement-vertical.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/forced-movement-vertical.hbs' },
   };
 
   async _prepareContext(options) {

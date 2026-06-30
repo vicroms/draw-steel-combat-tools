@@ -132,7 +132,7 @@ export class DamageConditionsPanel extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/damage-conditions.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/damage-conditions.hbs' },
   };
 
   _updatePreview() {

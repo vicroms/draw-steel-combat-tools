@@ -48,7 +48,7 @@ class TransformPicker extends ds.applications.api.DSApplication {
   }
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/transformation.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/transformation.hbs' },
   };
 
   static DEFAULT_OPTIONS = {
