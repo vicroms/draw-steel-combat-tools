@@ -112,7 +112,7 @@ export class FmModifyPanel extends ds.applications.api.DSApplication {
   }
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/chat-integration.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/chat-integration.hbs' },
   };
 
   static DEFAULT_OPTIONS = {

@@ -344,7 +344,7 @@ export class TeleportPanel extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/panels/teleport.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/teleport.hbs' },
   };
 
   _updatePreview() {

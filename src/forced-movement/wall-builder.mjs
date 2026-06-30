@@ -615,7 +615,7 @@ export class WallBuilderPanel extends ds.applications.api.DSApplication {
     this._stopInspect         = null;
   }
 
-  static PARTS = { form: { template: 'modules/draw-steel-combat-tools/templates/panels/wall-builder.hbs' } };
+  static PARTS = { form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/panels/wall-builder.hbs' } };
 
   static DEFAULT_OPTIONS = {
     id: 'wall-builder-panel',
@@ -1075,7 +1075,7 @@ export class WallBuilderSettingsMenu extends ds.applications.api.DSApplication {
   };
 
   static PARTS = {
-    form: { template: 'modules/draw-steel-combat-tools/templates/settings/wall-builder.hbs' },
+    form: { template: 'modules/draw-steel-combat-tools-vicroms/templates/settings/wall-builder.hbs' },
   };
 
   async _prepareContext(_options) {
