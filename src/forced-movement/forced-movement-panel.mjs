@@ -189,7 +189,7 @@ export class ForcedMovementPanel extends ds.applications.api.DSApplication {
         await ChatMessage.create({
           content: results.map(r => r.content).join('<hr style="margin: 4px 0;">'),
           flags: {
-            'draw-steel-combat-tools': {
+            'draw-steel-combat-tools-vicroms': {
               isFmUndo:   true,
               isCombined: true,
               entries:    results.map(({ content, undoLog, moveId, targetTokenId, targetSceneId, finalPos, hadDamage, grabsToRestore }) =>

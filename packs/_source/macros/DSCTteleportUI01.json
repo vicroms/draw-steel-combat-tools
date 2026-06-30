@@ -3,7 +3,7 @@
   "name": "DSCT: Teleport Panel",
   "type": "script",
   "img": "icons/magic/movement/trail-streak-pink.webp",
-  "command": "// Opens or closes the Teleport panel.\n// Select one or more tokens, configure color and animation in the panel, then click a destination on the canvas.\ngame.modules.get('draw-steel-combat-tools').api.teleportUI();",
+  "command": "// Opens or closes the Teleport panel.\n// Select one or more tokens, configure color and animation in the panel, then click a destination on the canvas.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.teleportUI();",
   "scope": "global",
   "sort": 1000,
   "folder": "DSCTfoldTP000001",

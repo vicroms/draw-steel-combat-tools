@@ -3,7 +3,7 @@
   "name": "DSCT: End Grab",
   "type": "script",
   "img": "icons/skills/melee/hand-grip-sword-orange.webp",
-  "command": "// Ends an active grab on the targeted or controlled grabbed token.\n// Target or select the token that is currently being grabbed, then run.\nconst token = [...game.user.targets][0] ?? canvas.tokens.controlled[0];\nif (!token) {\n  ui.notifications.warn('Target or select the grabbed token.');\n} else {\n  await game.modules.get('draw-steel-combat-tools').api.endGrab(token.id);\n}",
+  "command": "// Ends an active grab on the targeted or controlled grabbed token.\n// Target or select the token that is currently being grabbed, then run.\nconst token = [...game.user.targets][0] ?? canvas.tokens.controlled[0];\nif (!token) {\n  ui.notifications.warn('Target or select the grabbed token.');\n} else {\n  await game.modules.get('draw-steel-combat-tools-vicroms').api.endGrab(token.id);\n}",
   "scope": "global",
   "sort": 400,
   "folder": "DSCTfoldCond0001",

@@ -101,7 +101,7 @@ const splitConvertedWall = async (wallDoc, gx, gy, undoOps) => {
       ...baseData,
       flags: {
         ...baseData.flags,
-        'draw-steel-combat-tools': { tags: taggerTags },
+        'draw-steel-combat-tools-vicroms': { tags: taggerTags },
       },
       ...(segIds.length === 0 ? { move: 0 } : {}),
     };
@@ -223,7 +223,7 @@ const splitTileAtElevation = async (tile, splitElev, undoOps, collisionMsgs) => 
     alpha: splitBrokenAlpha, hidden: false, locked: false,
     occlusion: { modes: [], alpha: 0 }, restrictions: { light: false, weather: false },
     video: { loop: false, autoplay: false, volume: 0 },
-    flags: { 'draw-steel-combat-tools': { tags: topTileAllTags } },
+    flags: { 'draw-steel-combat-tools-vicroms': { tags: topTileAllTags } },
   }]);
 
   const createdWalls = [];
@@ -231,7 +231,7 @@ const splitTileAtElevation = async (tile, splitElev, undoOps, collisionMsgs) => 
     const result = await safeCreateEmbedded(canvas.scene, 'Wall', [{
       c: [x1, y1, x2, y2], move: 0, sight: 0, light: 0, sound: 0,
       dir: 0, door: 0,
-      flags: { 'wall-height': { bottom: splitElev, top: tileTop }, 'draw-steel-combat-tools': { tags: topTileAllTags } },
+      flags: { 'wall-height': { bottom: splitElev, top: tileTop }, 'draw-steel-combat-tools-vicroms': { tags: topTileAllTags } },
     }]);
     if (result?.[0]) createdWalls.push(result[0]);
   }
@@ -651,7 +651,7 @@ const destroyObjectToken = async (objectToken, undoOps) => {
         occlusion: { modes: [], alpha: 0 },
         restrictions: { light: false, weather: false },
         video: { loop: false, autoplay: false, volume: 0 },
-        flags: { 'draw-steel-combat-tools': { isObjectRubble: true, objectTokenId: objectToken.id } },
+        flags: { 'draw-steel-combat-tools-vicroms': { isObjectRubble: true, objectTokenId: objectToken.id } },
       }]);
       if (created?.[0]) {
         undoOps.push({ op: 'delete', uuid: embeddedUuid(canvas.scene, 'Tile', created[0]) });

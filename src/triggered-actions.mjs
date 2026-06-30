@@ -1,6 +1,6 @@
 import { safeCreateEmbedded, safeDelete, safeUpdate, getSetting, getTokenById } from './helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const TRIGGER_EFFECT = {
   name: "Unspent Triggered Action",

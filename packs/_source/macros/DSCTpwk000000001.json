@@ -3,7 +3,7 @@
   "name": "DSCT: Power Word Kill",
   "type": "script",
   "img": "icons/magic/death/skull-horned-goat-pentagram-red.webp",
-  "command": "// Opens the Power Word Kill UI.\n// Target one or more tokens to instantly kill them, triggering the death animation and placing skull markers for any eligible creatures.\ngame.modules.get('draw-steel-combat-tools').api.powerWordKill();",
+  "command": "// Opens the Power Word Kill UI.\n// Target one or more tokens to instantly kill them, triggering the death animation and placing skull markers for any eligible creatures.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.powerWordKill();",
   "scope": "global",
   "sort": 600,
   "folder": "DSCTfoldDT000001",

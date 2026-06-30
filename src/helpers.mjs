@@ -1,4 +1,4 @@
-export const getSetting = (key) => game.settings.get('draw-steel-combat-tools', key);
+export const getSetting = (key) => game.settings.get('draw-steel-combat-tools-vicroms', key);
 
 const PALETTE_DARK = {
   '--dsct-bg':           '#0e0c14',
@@ -50,7 +50,7 @@ const taggerActive = () => game.modules.get('tagger')?.active;
 
 
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 const _doc  = (obj) => obj?.document ?? obj;
 const _tags = (obj) => _doc(obj)?.getFlag(M, 'tags') ?? [];
 
@@ -87,11 +87,139 @@ export const removeTags = async (obj, tags) => {
 
 export const GRID = () => canvas.grid.size;
 
-export const toGrid   = (world) => ({ x: Math.floor(world.x / GRID()), y: Math.floor(world.y / GRID()) });
-export const toWorld  = (grid)  => ({ x: grid.x * GRID(), y: grid.y * GRID() });
-export const toCenter = (grid)  => ({ x: grid.x * GRID() + GRID() / 2, y: grid.y * GRID() + GRID() / 2 });
+const _gridType = () => canvas.grid.type ?? canvas.scene?.grid?.type ?? CONST.GRID_TYPES.SQUARE;
+export const isHexGrid = () => {
+  const t = _gridType();
+  return t === CONST.GRID_TYPES.HEXODDR
+      || t === CONST.GRID_TYPES.HEXEVENR
+      || t === CONST.GRID_TYPES.HEXODDQ
+      || t === CONST.GRID_TYPES.HEXEVENQ;
+};
+
+const _offsetPoint = (pt) => {
+  if (!pt) return null;
+  const x = Number.isFinite(pt.i) ? pt.i : (Number.isFinite(pt.x) ? pt.x : null);
+  const y = Number.isFinite(pt.j) ? pt.j : (Number.isFinite(pt.y) ? pt.y : null);
+  return (x === null || y === null) ? null : { x, y };
+};
+
+const _gridTopLeft = (grid) => {
+  const g = canvas.grid;
+  if (typeof g?.getTopLeftPoint === 'function') {
+    const p = _offsetPoint(g.getTopLeftPoint({ i: grid.x, j: grid.y }))
+           ?? _offsetPoint(g.getTopLeftPoint({ x: grid.x, y: grid.y }));
+    if (p) return p;
+  }
+  return { x: grid.x * GRID(), y: grid.y * GRID() };
+};
+
+const _gridCenter = (grid) => {
+  const g = canvas.grid;
+  if (typeof g?.getCenterPoint === 'function') {
+    const p = _offsetPoint(g.getCenterPoint({ i: grid.x, j: grid.y }))
+           ?? _offsetPoint(g.getCenterPoint({ x: grid.x, y: grid.y }));
+    if (p) return p;
+  }
+  const tl = _gridTopLeft(grid);
+  return { x: tl.x + GRID() / 2, y: tl.y + GRID() / 2 };
+};
+
+const _toCube = (g) => {
+  const col = g.x;
+  const row = g.y;
+  const type = _gridType();
+  let x;
+  let z;
+  if (type === CONST.GRID_TYPES.HEXODDR) {
+    x = col - ((row - (row & 1)) / 2);
+    z = row;
+  } else if (type === CONST.GRID_TYPES.HEXEVENR) {
+    x = col - ((row + (row & 1)) / 2);
+    z = row;
+  } else if (type === CONST.GRID_TYPES.HEXODDQ) {
+    x = col;
+    z = row - ((col - (col & 1)) / 2);
+  } else {
+    x = col;
+    z = row - ((col + (col & 1)) / 2);
+  }
+  const y = -x - z;
+  return { x, y, z };
+};
+
+export const toGrid = (world) => {
+  const g = canvas.grid;
+  if (typeof g?.getOffset === 'function') {
+    const p = _offsetPoint(g.getOffset({ x: world.x, y: world.y }));
+    if (p) return p;
+  }
+  return { x: Math.floor(world.x / GRID()), y: Math.floor(world.y / GRID()) };
+};
+export const toWorld  = (grid)  => _gridTopLeft(grid);
+export const toCenter = (grid)  => _gridCenter(grid);
 export const gridEq   = (a, b)  => a.x === b.x && a.y === b.y;
-export const gridDist = (a, b)  => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+export const gridDist = (a, b)  => {
+  if (isHexGrid()) {
+    const ca = _toCube(a);
+    const cb = _toCube(b);
+    return Math.max(Math.abs(ca.x - cb.x), Math.abs(ca.y - cb.y), Math.abs(ca.z - cb.z));
+  }
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+};
+
+export const getAdjacentGrids = (g) => {
+  if (!isHexGrid()) {
+    return [
+      { x: g.x - 1, y: g.y - 1 }, { x: g.x, y: g.y - 1 }, { x: g.x + 1, y: g.y - 1 },
+      { x: g.x - 1, y: g.y },                               { x: g.x + 1, y: g.y },
+      { x: g.x - 1, y: g.y + 1 }, { x: g.x, y: g.y + 1 }, { x: g.x + 1, y: g.y + 1 },
+    ];
+  }
+
+  const type = _gridType();
+  const oddRow = (g.y & 1) !== 0;
+  const oddCol = (g.x & 1) !== 0;
+  let deltas;
+
+  if (type === CONST.GRID_TYPES.HEXODDR) {
+    deltas = oddRow
+      ? [[1, 0], [1, -1], [0, -1], [-1, 0], [0, 1], [1, 1]]
+      : [[1, 0], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]];
+  } else if (type === CONST.GRID_TYPES.HEXEVENR) {
+    deltas = oddRow
+      ? [[1, 0], [0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]]
+      : [[1, 0], [1, -1], [0, -1], [-1, 0], [0, 1], [1, 1]];
+  } else if (type === CONST.GRID_TYPES.HEXODDQ) {
+    deltas = oddCol
+      ? [[1, -1], [0, -1], [-1, -1], [-1, 0], [0, 1], [1, 0]]
+      : [[1, 0], [0, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]];
+  } else {
+    deltas = oddCol
+      ? [[1, 0], [0, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]]
+      : [[1, -1], [0, -1], [-1, -1], [-1, 0], [0, 1], [1, 0]];
+  }
+
+  return deltas.map(([dx, dy]) => ({ x: g.x + dx, y: g.y + dy }));
+};
+
+export const gridCellsWithinDistance = (origin, dist, { excludeOrigin = false } = {}) => {
+  const result = [];
+  if (dist < 0) return result;
+  const seen = new Set([`${origin.x},${origin.y}`]);
+  const queue = [{ pos: origin, steps: 0 }];
+  while (queue.length) {
+    const { pos, steps } = queue.shift();
+    if (!(excludeOrigin && steps === 0)) result.push(pos);
+    if (steps >= dist) continue;
+    for (const nb of getAdjacentGrids(pos)) {
+      const k = `${nb.x},${nb.y}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      queue.push({ pos: nb, steps: steps + 1 });
+    }
+  }
+  return result;
+};
 
 export const MATERIAL_RULES    = () => getSetting('materialRules');
 export const WALL_RESTRICTIONS = () => getSetting('wallRestrictions');
@@ -165,7 +293,7 @@ export const getSquadGroup = (actor) => {
   return null;
 };
 
-const getSocket = () => game.modules.get('draw-steel-combat-tools').api.socket;
+const getSocket = () => game.modules.get('draw-steel-combat-tools-vicroms').api.socket;
 
 export const replayUndo = async (ops) => {
   for (const entry of ops) {
@@ -491,13 +619,18 @@ export const chooseFreeSquare = (targetToken, landedOnToken = null, { forceOnCan
 
   const getAdjacentRing = (radius) => {
     const squares = [];
-    const minX = refTg.x - radius, maxX = refTg.x + refSize - 1 + radius;
-    const minY = refTg.y - radius, maxY = refTg.y + refSize - 1 + radius;
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        if (x !== minX && x !== maxX && y !== minY && y !== maxY) continue;
-        if (x >= refTg.x && x < refTg.x + refSize && y >= refTg.y && y < refTg.y + refSize) continue;
-        squares.push({ x, y });
+    const seen = new Set();
+    for (let ix = 0; ix < refSize; ix++) {
+      for (let iy = 0; iy < refSize; iy++) {
+        const origin = { x: refTg.x + ix, y: refTg.y + iy };
+        for (const c of gridCellsWithinDistance(origin, radius)) {
+          if (gridDist(origin, c) !== radius) continue;
+          if (c.x >= refTg.x && c.x < refTg.x + refSize && c.y >= refTg.y && c.y < refTg.y + refSize) continue;
+          const k = `${c.x},${c.y}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          squares.push(c);
+        }
       }
     }
     return squares;
@@ -726,7 +859,7 @@ export const getWindowById = (id) =>
   ?? null;
 
 export const getModuleApi = (warn = true) => {
-  const api = game.modules.get('draw-steel-combat-tools')?.api ?? null;
+  const api = game.modules.get('draw-steel-combat-tools-vicroms')?.api ?? null;
   if (!api && warn) ui.notifications.error(game.i18n.localize('DSCT.notice.notActive'));
   return api;
 };
@@ -926,4 +1059,3 @@ export const applyRollMod = (el, baneData, delta) => {
 
   abilityRoll.dataset.dsctBaneApplied = 'true';
 };
-

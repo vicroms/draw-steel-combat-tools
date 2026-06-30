@@ -1,6 +1,6 @@
 import { getSetting, getModuleApi, getItemDsid } from '../../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const markButtonHTML = (maxTargets, override) => {
   const noun = maxTargets === 1 ? 'Mark' : `${maxTargets} Marks`;
@@ -35,8 +35,8 @@ export const registerMarkHooks = () => {
     const dsid = msg.getFlag(M, 'abilityDsid');
 
     if (getSetting('markAutomation') && !game.modules.get('draw-steel-target-damage')?.active) {
-      const reminder = msg.getFlag('draw-steel-combat-tools', 'markReminder');
-      if (reminder && !msg.getFlag('draw-steel-combat-tools', 'markReminderUsed')) {
+      const reminder = msg.getFlag('draw-steel-combat-tools-vicroms', 'markReminder');
+      if (reminder && !msg.getFlag('draw-steel-combat-tools-vicroms', 'markReminderUsed')) {
         const { dsid: rDsid, isMarkAbility, sourceActorId } = reminder;
         const reminderActor   = game.actors.get(sourceActorId);
         const reminderAnticip = isMarkAbility && (reminderActor?.items.some(i => getItemDsid(i) === 'anticipation') ?? false);
@@ -56,7 +56,7 @@ export const registerMarkHooks = () => {
             override   = true;
           }
           await getModuleApi(false)?.mark({ maxTargets, override, dsid: rDsid, sourceActorId });
-          await msg.setFlag('draw-steel-combat-tools', 'markReminderUsed', true);
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'markReminderUsed', true);
         });
         btnArea().appendChild(btn);
       }

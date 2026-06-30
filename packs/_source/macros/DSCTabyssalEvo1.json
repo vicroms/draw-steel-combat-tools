@@ -3,7 +3,7 @@
   "name": "DSCT: Abyssal Evolution",
   "type": "script",
   "img": "icons/creatures/unholy/demon-winged-cyclops-drooling.webp",
-  "command": "await game.modules.get('draw-steel-combat-tools')?.api?.abyssalEvolution();",
+  "command": "await game.modules.get('draw-steel-combat-tools-vicroms')?.api?.abyssalEvolution();",
   "scope": "global",
   "sort": 0,
   "folder": "DSCTfoldAA000001",

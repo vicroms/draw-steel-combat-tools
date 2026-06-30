@@ -25,11 +25,11 @@ export const triggerGrabberFreeStrike = async (grabberTok, grab) => {
 
 export const resolveEscapeChatMessage = async (grabbedTokenId, resolution) => {
   const msg = game.messages.contents.findLast(m =>
-    m.getFlag('draw-steel-combat-tools', 'escapeGrab')?.speakerToken === grabbedTokenId &&
-    !m.getFlag('draw-steel-combat-tools', 'escapeResolved')
+    m.getFlag('draw-steel-combat-tools-vicroms', 'escapeGrab')?.speakerToken === grabbedTokenId &&
+    !m.getFlag('draw-steel-combat-tools-vicroms', 'escapeResolved')
   );
   if (msg && (msg.isOwner || game.user.isGM)) {
-    await msg.setFlag('draw-steel-combat-tools', 'escapeResolved', resolution);
+    await msg.setFlag('draw-steel-combat-tools-vicroms', 'escapeResolved', resolution);
   }
 };
 
@@ -37,7 +37,7 @@ export const resolveGrabConfirmChatMessage = async (msgId, resolution) => {
   if (!msgId) return;
   const msg = game.messages.get(msgId);
   if (!msg || !(msg.isOwner || game.user.isGM)) return;
-  await msg.setFlag('draw-steel-combat-tools', 'grabConfirmResolved', resolution);
+  await msg.setFlag('draw-steel-combat-tools-vicroms', 'grabConfirmResolved', resolution);
 };
 
 const _escapeGrabInFlight = new Set();
@@ -165,11 +165,11 @@ function registerRollDialogHooks() {
     const casterTokenDoc = actor.token
       ? canvas.tokens.get(actor.token.id)
       : canvas.tokens.placeables.find(t => t.actor?.id === actor.id);
-    const judgeEffect = (casterTokenDoc?.actor ?? actor).effects?.find(e => e.getFlag('draw-steel-combat-tools', 'judgement')?.userId)
-                     ?? actor.effects?.find(e => e.getFlag('draw-steel-combat-tools', 'judgement')?.userId);
+    const judgeEffect = (casterTokenDoc?.actor ?? actor).effects?.find(e => e.getFlag('draw-steel-combat-tools-vicroms', 'judgement')?.userId)
+                     ?? actor.effects?.find(e => e.getFlag('draw-steel-combat-tools-vicroms', 'judgement')?.userId);
     if (!judgeEffect) return;
 
-    const judgementFlag  = judgeEffect.getFlag('draw-steel-combat-tools', 'judgement');
+    const judgementFlag  = judgeEffect.getFlag('draw-steel-combat-tools-vicroms', 'judgement');
     const censorActor = (judgementFlag?.actorId ? game.actors.get(judgementFlag.actorId) : null)
                         ?? game.users.get(judgementFlag?.userId)?.character;
 
@@ -218,14 +218,14 @@ function registerRollDialogHooks() {
 
     ChatMessage.create({
       content: game.i18n.format('DSCT.chat.tactical.judgementBaneReminder', { name: actor.name }),
-      flags: { 'draw-steel-combat-tools': { judgementBaneReminder: { actorId: actor.id, tokenId: actor.token?.id ?? casterTokenDoc?.id ?? null, dialogOwnerUserId: game.user.id }, ...flagData } },
+      flags: { 'draw-steel-combat-tools-vicroms': { judgementBaneReminder: { actorId: actor.id, tokenId: actor.token?.id ?? casterTokenDoc?.id ?? null, dialogOwnerUserId: game.user.id }, ...flagData } },
     }).then(msg => {
       if (!msg) return;
       app._dsctJudgementBaneMsgId = msg.id;
       if (lockDuration > 0) {
         const unlockHookId = Hooks.on('updateChatMessage', (m) => {
           if (m.id !== msg.id) return;
-          if (!m.getFlag('draw-steel-combat-tools', 'judgementBaneDeclined') && !m.getFlag('draw-steel-combat-tools', 'judgementBaneUsed')) return;
+          if (!m.getFlag('draw-steel-combat-tools-vicroms', 'judgementBaneDeclined') && !m.getFlag('draw-steel-combat-tools-vicroms', 'judgementBaneUsed')) return;
           clearTimeout(app._dsctBaneLockTimeout);
           Hooks.off('updateChatMessage', unlockHookId);
           unlockBtns();
@@ -242,7 +242,7 @@ function registerRollDialogHooks() {
       
       const msg = game.messages.get(app._dsctJudgementBaneMsgId);
       if (msg) {
-        const M = 'draw-steel-combat-tools';
+        const M = 'draw-steel-combat-tools-vicroms';
         if (msg.isOwner || game.user.isGM) {
           await msg.setFlag(M, 'judgementBaneCanceled', true);
         } else {
@@ -265,7 +265,7 @@ export function registerChatHooks() {
     if (getSetting('debugMode')) console.log(`DSCT | trySetFlag | enter msg=${msg.id} author=${msg.author?.name} isMe=${msg.author.id === game.user.id}`);
     if (msg.author.id !== game.user.id) return;
 
-    if (el && getSetting('bleedingEnabled') && _recentlyCreated.has(msg.id) && !msg.getFlag('draw-steel-combat-tools', 'bleedingTriggered') && !_bleedingInFlight.has(msg.id)) {
+    if (el && getSetting('bleedingEnabled') && _recentlyCreated.has(msg.id) && !msg.getFlag('draw-steel-combat-tools-vicroms', 'bleedingTriggered') && !_bleedingInFlight.has(msg.id)) {
       const speakerTokenId = msg.speaker?.token;
       const speakerTok = speakerTokenId ? getTokenById(speakerTokenId) : null;
       if (speakerTok?.actor?.statuses?.has('bleeding')) {
@@ -275,7 +275,7 @@ export function registerChatHooks() {
                         || rollChars.includes('might') || rollChars.includes('agility');
         if (triggers) {
           _bleedingInFlight.add(msg.id);
-          await msg.setFlag('draw-steel-combat-tools', 'bleedingTriggered', {
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'bleedingTriggered', {
             tokenId: speakerTokenId,
             actorUuid: speakerTok.actor.uuid,
             mode: getSetting('bleedingMode'),
@@ -298,20 +298,20 @@ export function registerChatHooks() {
 
     const dsid = getItemDsid(item);
 
-    if (!msg.getFlag('draw-steel-combat-tools', 'abilityDsid') && dsid) {
-      await msg.setFlag('draw-steel-combat-tools', 'abilityDsid', dsid);
+    if (!msg.getFlag('draw-steel-combat-tools-vicroms', 'abilityDsid') && dsid) {
+      await msg.setFlag('draw-steel-combat-tools-vicroms', 'abilityDsid', dsid);
     }
     if (!abilityResult?.tier) return;
 
     const tier = abilityResult.tier;
     if (getSetting('debugMode')) console.log(`DSCT | trySetFlag | dsid=${dsid} tier=${tier} item.system.power.effects count=${normalizeCollection(item.system?.power?.effects).length}`);
 
-    if (!msg.getFlag('draw-steel-combat-tools', 'escapeGrab') && !_escapeGrabInFlight.has(msg.id)) {
+    if (!msg.getFlag('draw-steel-combat-tools-vicroms', 'escapeGrab') && !_escapeGrabInFlight.has(msg.id)) {
       if (dsid === 'escape-grab' || item.name.toLowerCase().includes('escape grab')) {
         const grabbedTokenId = msg.speaker?.token;
         if (grabbedTokenId && window._activeGrabs?.has(grabbedTokenId)) {
           _escapeGrabInFlight.add(msg.id);
-          await msg.setFlag('draw-steel-combat-tools', 'escapeGrab', {
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'escapeGrab', {
             speakerToken: grabbedTokenId,
             tier
           });
@@ -375,13 +375,13 @@ export function registerChatHooks() {
       return _ba;
     };
 
-    if (msg.getFlag('draw-steel-combat-tools', 'isFallConfirm')) {
-      const creatorUserId = msg.getFlag('draw-steel-combat-tools', 'creatorUserId');
-      const isResolved    = msg.getFlag('draw-steel-combat-tools', 'fallConfirmResolved') != null;
+    if (msg.getFlag('draw-steel-combat-tools-vicroms', 'isFallConfirm')) {
+      const creatorUserId = msg.getFlag('draw-steel-combat-tools-vicroms', 'creatorUserId');
+      const isResolved    = msg.getFlag('draw-steel-combat-tools-vicroms', 'fallConfirmResolved') != null;
       const canResolve    = game.user.isGM || game.user.id === creatorUserId;
 
       if (isResolved) {
-        const res = msg.getFlag('draw-steel-combat-tools', 'fallConfirmResolved');
+        const res = msg.getFlag('draw-steel-combat-tools-vicroms', 'fallConfirmResolved');
         const status = document.createElement('div');
         status.className = 'dsct-undo-status';
         status.textContent = res === 'confirmed' ? game.i18n.localize('DSCT.fall.confirmed') : game.i18n.localize('DSCT.fall.cancelled');
@@ -397,13 +397,13 @@ export function registerChatHooks() {
           e.preventDefault();
           confirmBtn.disabled = true;
           cancelBtn.disabled  = true;
-          await msg.setFlag('draw-steel-combat-tools', 'fallConfirmResolved', 'confirmed');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'fallConfirmResolved', 'confirmed');
         });
         cancelBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           confirmBtn.disabled = true;
           cancelBtn.disabled  = true;
-          await msg.setFlag('draw-steel-combat-tools', 'fallConfirmResolved', 'cancelled');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'fallConfirmResolved', 'cancelled');
         });
         btnArea().appendChild(confirmBtn);
         btnArea().appendChild(cancelBtn);
@@ -415,10 +415,10 @@ export function registerChatHooks() {
       }
     }
 
-    if (msg.getFlag('draw-steel-combat-tools', 'isFriendlyFireCase1')) {
-      const isResolved = msg.getFlag('draw-steel-combat-tools', 'ffCase1Resolved') != null;
+    if (msg.getFlag('draw-steel-combat-tools-vicroms', 'isFriendlyFireCase1')) {
+      const isResolved = msg.getFlag('draw-steel-combat-tools-vicroms', 'ffCase1Resolved') != null;
       if (isResolved) {
-        const res = msg.getFlag('draw-steel-combat-tools', 'ffCase1Resolved');
+        const res = msg.getFlag('draw-steel-combat-tools-vicroms', 'ffCase1Resolved');
         const status = document.createElement('div');
         status.className = 'dsct-undo-status';
         status.textContent = res === 'stop'
@@ -436,23 +436,23 @@ export function registerChatHooks() {
           e.preventDefault();
           stopBtn.disabled    = true;
           proceedBtn.disabled = true;
-          await msg.setFlag('draw-steel-combat-tools', 'ffCase1Resolved', 'stop');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'ffCase1Resolved', 'stop');
         });
         proceedBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           stopBtn.disabled    = true;
           proceedBtn.disabled = true;
-          await msg.setFlag('draw-steel-combat-tools', 'ffCase1Resolved', 'proceed');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'ffCase1Resolved', 'proceed');
         });
         btnArea().appendChild(stopBtn);
         btnArea().appendChild(proceedBtn);
       }
     }
 
-    if (msg.getFlag('draw-steel-combat-tools', 'isFriendlyFireCase2')) {
-      const isResolved = msg.getFlag('draw-steel-combat-tools', 'ffCase2Resolved') != null;
+    if (msg.getFlag('draw-steel-combat-tools-vicroms', 'isFriendlyFireCase2')) {
+      const isResolved = msg.getFlag('draw-steel-combat-tools-vicroms', 'ffCase2Resolved') != null;
       if (isResolved) {
-        const res = msg.getFlag('draw-steel-combat-tools', 'ffCase2Resolved');
+        const res = msg.getFlag('draw-steel-combat-tools-vicroms', 'ffCase2Resolved');
         const status = document.createElement('div');
         status.className = 'dsct-undo-status';
         status.textContent = res === 'confirm'
@@ -472,17 +472,17 @@ export function registerChatHooks() {
           e.preventDefault();
           confirmBtn.disabled = true;
           cancelBtn.disabled  = true;
-          await msg.setFlag('draw-steel-combat-tools', 'ffCase2Resolved', 'confirm');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'ffCase2Resolved', 'confirm');
         });
         cancelBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           confirmBtn.disabled = true;
           cancelBtn.disabled  = true;
-          await msg.setFlag('draw-steel-combat-tools', 'ffCase2Resolved', 'cancel');
+          await msg.setFlag('draw-steel-combat-tools-vicroms', 'ffCase2Resolved', 'cancel');
         });
         btnArea().appendChild(confirmBtn);
         btnArea().appendChild(cancelBtn);
-        if (msg.getFlag('draw-steel-combat-tools', 'ffCase2HasIgnoreOption')) {
+        if (msg.getFlag('draw-steel-combat-tools-vicroms', 'ffCase2HasIgnoreOption')) {
           const ignoreBtn = document.createElement('button');
           ignoreBtn.type  = 'button';
           ignoreBtn.innerHTML = `<i class="fa-solid fa-person-running"></i> ${game.i18n.localize('DSCT.button.ignoreAlly')}`;
@@ -491,16 +491,16 @@ export function registerChatHooks() {
             confirmBtn.disabled = true;
             cancelBtn.disabled  = true;
             ignoreBtn.disabled  = true;
-            await msg.setFlag('draw-steel-combat-tools', 'ffCase2Resolved', 'ignore');
+            await msg.setFlag('draw-steel-combat-tools-vicroms', 'ffCase2Resolved', 'ignore');
           });
           btnArea().appendChild(ignoreBtn);
         }
       }
     }
 
-    const grabConfirm = msg.getFlag('draw-steel-combat-tools', 'grabConfirm');
+    const grabConfirm = msg.getFlag('draw-steel-combat-tools-vicroms', 'grabConfirm');
     if (grabConfirm) {
-      const resolved = msg.getFlag('draw-steel-combat-tools', 'grabConfirmResolved');
+      const resolved = msg.getFlag('draw-steel-combat-tools-vicroms', 'grabConfirmResolved');
       if (resolved) {
         const status = document.createElement('div');
         status.className = 'dsct-undo-status';
@@ -535,9 +535,9 @@ export function registerChatHooks() {
       }
     }
 
-    const escapeData = msg.getFlag('draw-steel-combat-tools', 'escapeGrab');
+    const escapeData = msg.getFlag('draw-steel-combat-tools-vicroms', 'escapeGrab');
     if (escapeData?.tier === 2) {
-      const resolvedState = msg.getFlag('draw-steel-combat-tools', 'escapeResolved');
+      const resolvedState = msg.getFlag('draw-steel-combat-tools-vicroms', 'escapeResolved');
       const container = document.createElement('div');
       container.className = 'dsct-escape-actions';
 
@@ -576,14 +576,14 @@ export function registerChatHooks() {
       }
     }
 
-    const bleedingData = msg.getFlag('draw-steel-combat-tools', 'bleedingTriggered');
+    const bleedingData = msg.getFlag('draw-steel-combat-tools-vicroms', 'bleedingTriggered');
     if (bleedingData) {
       const div = document.createElement('div');
       div.className = 'dsct-bleeding-roll';
       div.style.cssText = 'margin-top:6px;border-top:1px solid var(--color-border-light-primary);padding-top:6px;font-size:13px;';
 
       if (bleedingData.mode === 'auto') {
-        const applied = msg.getFlag('draw-steel-combat-tools', 'bleedingApplied');
+        const applied = msg.getFlag('draw-steel-combat-tools-vicroms', 'bleedingApplied');
         if (applied) {
           div.innerHTML = `<em><i class="fa-solid fa-droplet"></i> ${game.i18n.localize('DSCT.chat.bleeding.applied')}</em>`;
         } else {
@@ -616,14 +616,14 @@ export function registerChatHooks() {
                 'system.parts': [{ rolls: [dmgRoll], flavor: title, type: 'roll' }],
                 flags: {
                   core: { canPopout: true },
-                  'draw-steel-combat-tools': { bleedingRoll: {
+                  'draw-steel-combat-tools-vicroms': { bleedingRoll: {
                     actorUuid: bleedingData.actorUuid, dmg, prevValue, prevTemp,
                     prevSquadHP, squadGroupUuid: sg?.uuid ?? null, sourceMsgId: msg.id,
                   }},
                 },
               });
               await applyDamage(actor, dmg, undefined, { damageType: 'untyped', sourceItemName: 'Bleeding' });
-              await msg.setFlag('draw-steel-combat-tools', 'bleedingApplied', { dmg, rollMsgId: rollMsg?.id });
+              await msg.setFlag('draw-steel-combat-tools-vicroms', 'bleedingApplied', { dmg, rollMsgId: rollMsg?.id });
               if (getSetting('debugMode')) console.log(`DSCT | Bleeding | Auto-applied ${dmg} damage to ${actor.name}`);
               _bleedingInFlight.delete(msg.id);
             })();
@@ -631,7 +631,7 @@ export function registerChatHooks() {
           div.innerHTML = `<em>${game.i18n.localize('DSCT.chat.bleeding.applying')}</em>`;
         }
       } else {
-        const applied = msg.getFlag('draw-steel-combat-tools', 'bleedingApplied');
+        const applied = msg.getFlag('draw-steel-combat-tools-vicroms', 'bleedingApplied');
         if (applied) {
           div.innerHTML = `<em><i class="fa-solid fa-droplet"></i> ${game.i18n.localize('DSCT.chat.bleeding.rollCreated')}</em>`;
         } else {
@@ -651,7 +651,7 @@ export function registerChatHooks() {
               'system.parts': [{ rolls: [dmgRoll], flavor: title, type: 'roll' }],
               flags: { core: { canPopout: true } },
             });
-            await msg.setFlag('draw-steel-combat-tools', 'bleedingApplied', { manual: true });
+            await msg.setFlag('draw-steel-combat-tools-vicroms', 'bleedingApplied', { manual: true });
           });
         }
       }
@@ -659,7 +659,7 @@ export function registerChatHooks() {
     }
 
     
-    const rollData = msg.getFlag('draw-steel-combat-tools', 'bleedingRoll');
+    const rollData = msg.getFlag('draw-steel-combat-tools-vicroms', 'bleedingRoll');
     if (rollData) {
       
       el.querySelectorAll('.apply-damage').forEach(b => b.remove());
@@ -682,8 +682,8 @@ export function registerChatHooks() {
         }
         const sourceMsg = game.messages.get(rollData.sourceMsgId);
         if (sourceMsg && (sourceMsg.isOwner || game.user.isGM)) {
-          await sourceMsg.unsetFlag('draw-steel-combat-tools', 'bleedingTriggered');
-          await sourceMsg.unsetFlag('draw-steel-combat-tools', 'bleedingApplied');
+          await sourceMsg.unsetFlag('draw-steel-combat-tools-vicroms', 'bleedingTriggered');
+          await sourceMsg.unsetFlag('draw-steel-combat-tools-vicroms', 'bleedingApplied');
         }
         if (msg.isOwner || game.user.isGM) await msg.delete();
       });

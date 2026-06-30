@@ -3,7 +3,7 @@
   "name": "DSCT: Apply Triggered Action Trackers",
   "type": "script",
   "img": "icons/magic/symbols/runes-star-magenta.webp",
-  "command": "// Manually applies the Unspent Triggered Action tracker to combatants.\n// Normally runs automatically at combat start when the setting is enabled.\n// Uses the \"Triggered Action Tracker Targets\" module setting by default.\n// Pass an explicit mode to override: 'ALL', 'HEROES', 'NPCS', or 'TARGETED'.\nawait game.modules.get('draw-steel-combat-tools').api.triggeredActions();",
+  "command": "// Manually applies the Unspent Triggered Action tracker to combatants.\n// Normally runs automatically at combat start when the setting is enabled.\n// Uses the \"Triggered Action Tracker Targets\" module setting by default.\n// Pass an explicit mode to override: 'ALL', 'HEROES', 'NPCS', or 'TARGETED'.\nawait game.modules.get('draw-steel-combat-tools-vicroms').api.triggeredActions();",
   "scope": "global",
   "sort": 1400,
   "folder": "DSCTfoldUT000001",

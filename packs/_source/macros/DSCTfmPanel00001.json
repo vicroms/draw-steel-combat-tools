@@ -3,7 +3,7 @@
   "name": "DSCT: Forced Movement Panel",
   "type": "script",
   "img": "icons/skills/movement/arrows-up-trio-red.webp",
-  "command": "// Opens or closes the Forced Movement panel.\n// Select one token (the source/pusher) and target one token (the creature being moved).\n// Configure type (Push / Pull / Slide), distance, and optional vertical movement in the panel.\ngame.modules.get('draw-steel-combat-tools').api.forcedMovementUI();",
+  "command": "// Opens or closes the Forced Movement panel.\n// Select one token (the source/pusher) and target one token (the creature being moved).\n// Configure type (Push / Pull / Slide), distance, and optional vertical movement in the panel.\ngame.modules.get('draw-steel-combat-tools-vicroms').api.forcedMovementUI();",
   "scope": "global",
   "sort": 0,
   "folder": "DSCTfoldFM000001",

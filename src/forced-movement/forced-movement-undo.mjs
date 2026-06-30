@@ -80,25 +80,25 @@ const handleStaminaRevival = async (undoLog) => {
 
     
     if (isDead) {
-      const preTint = tokenDoc.getFlag('draw-steel-combat-tools', 'preDeathTint') ?? '#ffffff';
-      const preAlpha = tokenDoc.getFlag('draw-steel-combat-tools', 'preDeathAlpha') ?? 1;
-      const savedDisplayBars = tokenDoc.getFlag('draw-steel-combat-tools', 'savedDisplayBars');
+      const preTint = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'preDeathTint') ?? '#ffffff';
+      const preAlpha = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'preDeathAlpha') ?? 1;
+      const savedDisplayBars = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'savedDisplayBars');
       const restoreData = { 'texture.tint': preTint, alpha: preAlpha };
       if (savedDisplayBars !== undefined) restoreData.displayBars = savedDisplayBars;
       await safeUpdate(tokenDoc, restoreData);
-      await tokenDoc.unsetFlag('draw-steel-combat-tools', 'preDeathTint');
-      await tokenDoc.unsetFlag('draw-steel-combat-tools', 'preDeathAlpha');
-      if (savedDisplayBars !== undefined) await tokenDoc.unsetFlag('draw-steel-combat-tools', 'savedDisplayBars');
+      await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'preDeathTint');
+      await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'preDeathAlpha');
+      if (savedDisplayBars !== undefined) await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'savedDisplayBars');
     }
 
     
     
     
     if (game.combat) {
-      const savedGroupId = tokenDoc.getFlag('draw-steel-combat-tools', 'savedGroupId');
+      const savedGroupId = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'savedGroupId');
       if (combatantDefeated) {
         await existingCombatant.update({ defeated: false });
-        if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools', 'savedGroupId');
+        if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'savedGroupId');
       } else if (!existingCombatant) {
         if (savedGroupId) {
           const squadOp = staminaOps.find(op =>
@@ -117,14 +117,14 @@ const handleStaminaRevival = async (undoLog) => {
         const combatantData = { tokenId: tokenDoc.id, sceneId: canvas.scene.id, actorId: tokenDoc.actorId };
         if (savedGroupId) combatantData.group = savedGroupId;
         await game.combat.createEmbeddedDocuments('Combatant', [combatantData]);
-        if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools', 'savedGroupId');
+        if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'savedGroupId');
       }
     }
 
     const deathMsgs = game.messages.filter(m => {
-      if (!m.getFlag('draw-steel-combat-tools', 'isDeathMessage')) return false;
-      const ids = m.getFlag('draw-steel-combat-tools', 'deadTokenIds') ??
-        (m.getFlag('draw-steel-combat-tools', 'deadTokenId') ? [m.getFlag('draw-steel-combat-tools', 'deadTokenId')] : []);
+      if (!m.getFlag('draw-steel-combat-tools-vicroms', 'isDeathMessage')) return false;
+      const ids = m.getFlag('draw-steel-combat-tools-vicroms', 'deadTokenIds') ??
+        (m.getFlag('draw-steel-combat-tools-vicroms', 'deadTokenId') ? [m.getFlag('draw-steel-combat-tools-vicroms', 'deadTokenId')] : []);
       return ids.includes(tokenDoc.id);
     });
     for (const dm of deathMsgs) await safeDelete(dm);
@@ -147,7 +147,7 @@ const isEntryExpired = (entry) => {
     if (getSetting('debugMode')) console.log(`DSCT | FM | EXPIRED (token deleted) targetTokenId=${entry.targetTokenId}`);
     return true;
   }
-  const lastMoveId = token.getFlag('draw-steel-combat-tools', 'lastFmMoveId');
+  const lastMoveId = token.getFlag('draw-steel-combat-tools-vicroms', 'lastFmMoveId');
   if (lastMoveId && lastMoveId !== entry.moveId) {
     if (getSetting('debugMode')) console.log(`DSCT | FM | EXPIRED (moveId mismatch) msg=${entry.moveId} token=${lastMoveId} | target=${token.name}`);
     return true;
@@ -226,11 +226,11 @@ const addFmUndoPreview = (btn, previews) => {
 
 export const registerForcedMovementHooks = () => {
   Hooks.on('renderChatMessageHTML', (msg, el) => {
-    if (!msg.getFlag('draw-steel-combat-tools', 'isFmUndo')) return;
+    if (!msg.getFlag('draw-steel-combat-tools-vicroms', 'isFmUndo')) return;
 
-    const isUndone   = msg.getFlag('draw-steel-combat-tools', 'isUndone');
-    const isCombined = msg.getFlag('draw-steel-combat-tools', 'isCombined');
-    const hadDamage  = msg.getFlag('draw-steel-combat-tools', 'hadDamage');
+    const isUndone   = msg.getFlag('draw-steel-combat-tools-vicroms', 'isUndone');
+    const isCombined = msg.getFlag('draw-steel-combat-tools-vicroms', 'isCombined');
+    const hadDamage  = msg.getFlag('draw-steel-combat-tools-vicroms', 'hadDamage');
 
     let btnArea = el.querySelector('.message-part-buttons');
     if (!btnArea) {
@@ -240,8 +240,8 @@ export const registerForcedMovementHooks = () => {
     }
 
     if (isCombined) {
-      const entries  = msg.getFlag('draw-steel-combat-tools', 'entries') ?? [];
-      let isExpired  = msg.getFlag('draw-steel-combat-tools', 'isExpired') ?? false;
+      const entries  = msg.getFlag('draw-steel-combat-tools-vicroms', 'entries') ?? [];
+      let isExpired  = msg.getFlag('draw-steel-combat-tools-vicroms', 'isExpired') ?? false;
       if (!isExpired) isExpired = entries.some(isEntryExpired);
 
       if (isUndone) {
@@ -250,7 +250,7 @@ export const registerForcedMovementHooks = () => {
         btnArea.appendChild(makeStatusDiv('(Undo Expired)'));
       } else if (game.user.isGM || msg.isAuthor) {
         const btn = makeUndoBtn('Undo All Movements', async () => {
-          await safeUpdate(msg, { 'flags.draw-steel-combat-tools.isUndone': true });
+          await safeUpdate(msg, { 'flags.draw-steel-combat-tools-vicroms.isUndone': true });
           const allRevived = [];
           for (const entry of [...entries].reverse()) {
             if (entry.undoLog) {
@@ -274,13 +274,13 @@ export const registerForcedMovementHooks = () => {
       return;
     }
 
-    let isExpired = msg.getFlag('draw-steel-combat-tools', 'isExpired') ?? false;
+    let isExpired = msg.getFlag('draw-steel-combat-tools-vicroms', 'isExpired') ?? false;
     if (!isExpired) {
       isExpired = isEntryExpired({
-        moveId:        msg.getFlag('draw-steel-combat-tools', 'moveId'),
-        targetTokenId: msg.getFlag('draw-steel-combat-tools', 'targetTokenId'),
-        targetSceneId: msg.getFlag('draw-steel-combat-tools', 'targetSceneId'),
-        finalPos:      msg.getFlag('draw-steel-combat-tools', 'finalPos'),
+        moveId:        msg.getFlag('draw-steel-combat-tools-vicroms', 'moveId'),
+        targetTokenId: msg.getFlag('draw-steel-combat-tools-vicroms', 'targetTokenId'),
+        targetSceneId: msg.getFlag('draw-steel-combat-tools-vicroms', 'targetSceneId'),
+        finalPos:      msg.getFlag('draw-steel-combat-tools-vicroms', 'finalPos'),
       });
     }
 
@@ -289,14 +289,14 @@ export const registerForcedMovementHooks = () => {
     } else if (isExpired) {
       btnArea.appendChild(makeStatusDiv('(Undo Expired)'));
     } else if (game.user.isGM || msg.isAuthor) {
-      const undoLog     = msg.getFlag('draw-steel-combat-tools', 'undoLog');
-      const targetTokId = msg.getFlag('draw-steel-combat-tools', 'targetTokenId');
+      const undoLog     = msg.getFlag('draw-steel-combat-tools-vicroms', 'undoLog');
+      const targetTokId = msg.getFlag('draw-steel-combat-tools-vicroms', 'targetTokenId');
       const btn = makeUndoBtn('Undo Movement', async () => {
         if (undoLog) {
-          await safeUpdate(msg, { 'flags.draw-steel-combat-tools.isUndone': true });
+          await safeUpdate(msg, { 'flags.draw-steel-combat-tools-vicroms.isUndone': true });
           const revivedNames = await handleStaminaRevival(undoLog);
           await replayUndo(undoLog);
-          await restoreGrabs(msg.getFlag('draw-steel-combat-tools', 'grabsToRestore'));
+          await restoreGrabs(msg.getFlag('draw-steel-combat-tools-vicroms', 'grabsToRestore'));
           ui.notifications.info(revivedNames.length > 0
             ? `Forced movement reversed. Revived: ${[...new Set(revivedNames)].join(', ')}.`
             : 'Forced movement undone.'

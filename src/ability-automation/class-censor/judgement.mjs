@@ -2,7 +2,7 @@ import { getSetting, getModuleApi } from '../../helpers.mjs';
 import { flagJudgementTriggersUsed } from '../tactical-effects.mjs';
 import { applyTaunted } from '../../conditions/conditions.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 export const registerJudgementHooks = () => {
   Hooks.on('renderChatMessageHTML', (msg, el) => {

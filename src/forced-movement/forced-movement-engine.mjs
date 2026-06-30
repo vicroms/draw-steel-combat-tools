@@ -1,7 +1,7 @@
 import {
   hasTags, getTags, getByTag, addTags, removeTags,
   GRID as getGRID,
-  toGrid, toWorld, gridEq, gridDist,
+  toGrid, toWorld, gridEq, gridDist, getAdjacentGrids,
   MATERIAL_RULES, MATERIAL_ICONS,
   getMaterialIcon, getMaterialAlpha,
   getMaterial, tokenAt, tileAt, wallBetween,
@@ -223,11 +223,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
               let currGrid = { ...startGrid };
               
               for (let i = 0; i < reduced; i++) {
-                  const adjacents = [
-                      {x: currGrid.x - 1, y: currGrid.y - 1}, {x: currGrid.x, y: currGrid.y - 1}, {x: currGrid.x + 1, y: currGrid.y - 1},
-                      {x: currGrid.x - 1, y: currGrid.y},                                         {x: currGrid.x + 1, y: currGrid.y},
-                      {x: currGrid.x - 1, y: currGrid.y + 1}, {x: currGrid.x, y: currGrid.y + 1}, {x: currGrid.x + 1, y: currGrid.y + 1}
-                  ];
+                  const adjacents = getAdjacentGrids(currGrid);
 
                   let bestNext = null;
                   let bestScore = Infinity;
@@ -453,11 +449,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         while (queue.length) {
           const { pos, steps } = queue.shift();
           if (steps >= stepsRemaining || steps >= drawCap) continue;
-          const neighbors = [
-            { x: pos.x - 1, y: pos.y - 1 }, { x: pos.x, y: pos.y - 1 }, { x: pos.x + 1, y: pos.y - 1 },
-            { x: pos.x - 1, y: pos.y },                                    { x: pos.x + 1, y: pos.y },
-            { x: pos.x - 1, y: pos.y + 1 }, { x: pos.x, y: pos.y + 1 }, { x: pos.x + 1, y: pos.y + 1 },
-          ];
+          const neighbors = getAdjacentGrids(pos);
           for (const nb of neighbors) {
             if (gridEq(nb, startGrid)) continue;
             if (pathSet.has(key(nb))) continue;
@@ -594,11 +586,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
             }
             return steps.length > 0 && steps.length <= remaining ? steps : null;
           }
-          const neighbors = [
-            { x: curr.x - 1, y: curr.y - 1 }, { x: curr.x, y: curr.y - 1 }, { x: curr.x + 1, y: curr.y - 1 },
-            { x: curr.x - 1, y: curr.y },                                      { x: curr.x + 1, y: curr.y },
-            { x: curr.x - 1, y: curr.y + 1 }, { x: curr.x, y: curr.y + 1 }, { x: curr.x + 1, y: curr.y + 1 },
-          ];
+          const neighbors = getAdjacentGrids(curr);
           for (const nb of neighbors) {
             const k = key(nb);
             if (!parent.has(k) && isValidStep(curr, nb)) {
@@ -1576,10 +1564,10 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
 
       
       
-      const oldMoveId = targetToken.document.getFlag('draw-steel-combat-tools', 'lastFmMoveId');
+      const oldMoveId = targetToken.document.getFlag('draw-steel-combat-tools-vicroms', 'lastFmMoveId');
       if (oldMoveId) {
-        const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools', 'moveId') === oldMoveId);
-        if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools.isExpired': true });
+        const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools-vicroms', 'moveId') === oldMoveId);
+        if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools-vicroms.isExpired': true });
       }
 
       const moveId = foundry.utils.randomID();
@@ -1590,10 +1578,10 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
         console.log(`DSCT | FM | Pre-message snapshot (vert) for ${targetToken.name}: doc.x=${targetToken.document.x}, doc.y=${targetToken.document.y}, doc.elev=${targetToken.document.elevation??0} | live.x=${liveSnapV?.x}, live.y=${liveSnapV?.y}, live.elev=${liveSnapV?.elevation??0} | finalPos will be (${startPos.x},${startPos.y},${vertTargetElev}) | doc===live: ${targetToken.document === liveSnapV}`);
       }
 
-      await safeUpdate(targetToken.document, { 'flags.draw-steel-combat-tools.lastFmMoveId': moveId });
+      await safeUpdate(targetToken.document, { 'flags.draw-steel-combat-tools-vicroms.lastFmMoveId': moveId });
 
       if (getSetting('debugMode')) {
-        console.log(`DSCT | FM | Assigned moveId=${moveId} to ${targetToken.name} (vert). Confirmed lastFmMoveId=${targetToken.document.getFlag('draw-steel-combat-tools','lastFmMoveId')}`);
+        console.log(`DSCT | FM | Assigned moveId=${moveId} to ${targetToken.name} (vert). Confirmed lastFmMoveId=${targetToken.document.getFlag('draw-steel-combat-tools-vicroms','lastFmMoveId')}`);
       }
 
       const vertResultData = {
@@ -1608,7 +1596,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
       if (suppressMessage) return vertResultData;
       await ChatMessage.create({
         content: vertResultData.content,
-        flags: { 'draw-steel-combat-tools': { isFmUndo: true, isUndone: false, ...vertResultData } }
+        flags: { 'draw-steel-combat-tools-vicroms': { isFmUndo: true, isUndone: false, ...vertResultData } }
       });
       return;
     }
@@ -2416,10 +2404,10 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
       }
     }
 
-    const oldMoveId = targetToken.document.getFlag('draw-steel-combat-tools', 'lastFmMoveId');
+    const oldMoveId = targetToken.document.getFlag('draw-steel-combat-tools-vicroms', 'lastFmMoveId');
     if (oldMoveId) {
-      const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools', 'moveId') === oldMoveId);
-      if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools.isExpired': true });
+      const oldMsg = game.messages.contents.find(m => m.getFlag('draw-steel-combat-tools-vicroms', 'moveId') === oldMoveId);
+      if (oldMsg) await safeUpdate(oldMsg, { 'flags.draw-steel-combat-tools-vicroms.isExpired': true });
     }
 
     const moveId = foundry.utils.randomID();
@@ -2434,10 +2422,10 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
       console.log(`DSCT | FM | Pre-message snapshot for ${targetToken.name}: doc.x=${targetToken.document.x}, doc.y=${targetToken.document.y}, doc.elev=${targetToken.document.elevation??0} | live.x=${liveSnap?.x}, live.y=${liveSnap?.y}, live.elev=${liveSnap?.elevation??0} | finalPos will be (${landingWorld.x},${landingWorld.y},${targetElev}) | doc===live: ${targetToken.document === liveSnap}`);
     }
 
-    await safeUpdate(targetToken.document, { 'flags.draw-steel-combat-tools.lastFmMoveId': moveId });
+    await safeUpdate(targetToken.document, { 'flags.draw-steel-combat-tools-vicroms.lastFmMoveId': moveId });
 
     if (getSetting('debugMode')) {
-      console.log(`DSCT | FM | Assigned moveId=${moveId} to ${targetToken.name}. Confirmed lastFmMoveId=${targetToken.document.getFlag('draw-steel-combat-tools','lastFmMoveId')}`);
+      console.log(`DSCT | FM | Assigned moveId=${moveId} to ${targetToken.name}. Confirmed lastFmMoveId=${targetToken.document.getFlag('draw-steel-combat-tools-vicroms','lastFmMoveId')}`);
     }
 
     const mainResultData = {
@@ -2453,7 +2441,7 @@ const _runForcedMovement = async (type, distance, targetToken, sourceToken, bonu
     if (suppressMessage) { window._dsctFMActive = false; return mainResultData; }
     await ChatMessage.create({
       content: mainResultData.content,
-      flags: { 'draw-steel-combat-tools': { isFmUndo: true, isUndone: false, ...mainResultData } }
+      flags: { 'draw-steel-combat-tools-vicroms': { isFmUndo: true, isUndone: false, ...mainResultData } }
     });
     window._dsctFMActive = false;
 };
@@ -2606,7 +2594,7 @@ export async function runForcedMovement(macroArgs = []) {
       await ChatMessage.create({
         content: results.map(r => r.content).join('<hr style="margin: 4px 0;">'),
         flags: {
-          'draw-steel-combat-tools': {
+          'draw-steel-combat-tools-vicroms': {
             isFmUndo:   true,
             isCombined: true,
             entries:    results.map(({ content, undoLog, moveId, targetTokenId, targetSceneId, finalPos, hadDamage, grabsToRestore }) =>
@@ -2678,7 +2666,7 @@ export async function runForcedMovement(macroArgs = []) {
       await ChatMessage.create({
         content: results.map(r => r.content).join('<hr style="margin: 4px 0;">'),
         flags: {
-          'draw-steel-combat-tools': {
+          'draw-steel-combat-tools-vicroms': {
             isFmUndo:   true,
             isCombined: true,
             entries:    results.map(({ content, undoLog, moveId, targetTokenId, targetSceneId, finalPos, hadDamage, grabsToRestore }) =>

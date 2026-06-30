@@ -2,7 +2,7 @@ import { getSetting, getModuleApi, safeToggleStatusEffect, safeUpdate, getSquadG
 import { setRaisedDeadVisible, addPreviewToken, removePreviewToken, activateTokenLayer, clearPreviewTokens } from './defeated-token-visibility.mjs';
 import { applySquadLabels } from '../squad-labels.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 let _deathBatch = [];
 let _deathBatchTimer = null;
@@ -132,12 +132,12 @@ const _processTokenDeath = async (token, actor, { batchEntries = null } = {}) =>
           occlusion: { modes: [], alpha: 0 },
           restrictions: { light: false, weather: false },
           video: { loop: false, autoplay: false, volume: 0 },
-          flags: { 'draw-steel-combat-tools': { isObjectRubble: true, objectTokenId: token.id } },
+          flags: { 'draw-steel-combat-tools-vicroms': { isObjectRubble: true, objectTokenId: token.id } },
         }]);
       }
 
       await token.document.update({ hidden: true, alpha: 1, 'texture.tint': '#ffffff' });
-      await token.document.setFlag('draw-steel-combat-tools', 'isDefeatedObject', true);
+      await token.document.setFlag('draw-steel-combat-tools-vicroms', 'isDefeatedObject', true);
     }
 
     if (!isObject && actor.system?.isMinion) actor.updateSource({ 'system.stamina.value': 0 });
@@ -2156,9 +2156,9 @@ export function registerDeathTrackerHooks() {
     }
     const markerId = tokenDoc.getFlag(M, 'deathMarkerTileId');
     if (markerId) canvas.scene.tiles.get(markerId)?.delete().catch(() => {});
-    if (!tokenDoc.flags?.['draw-steel-combat-tools']?.isDefeatedObject) return;
+    if (!tokenDoc.flags?.['draw-steel-combat-tools-vicroms']?.isDefeatedObject) return;
     const rubble = canvas.scene?.tiles?.contents?.filter(t =>
-      t.flags?.['draw-steel-combat-tools']?.objectTokenId === tokenDoc.id
+      t.flags?.['draw-steel-combat-tools-vicroms']?.objectTokenId === tokenDoc.id
     ) ?? [];
     for (const tile of rubble) tile.delete().catch(() => {});
     if (getSetting('debugMode') && rubble.length > 0) console.log(`DSCT | DT | Deleted ${rubble.length} rubble tile(s) for object token ${tokenDoc.id}.`);
@@ -2591,9 +2591,9 @@ const executeRevival = async (tokenId, { skipGroupHpUpdate = false } = {}) => {
     }
   }
 
-  const preTint = tokenDoc.getFlag('draw-steel-combat-tools', 'preDeathTint') ?? '#ffffff';
-  const preAlpha = tokenDoc.getFlag('draw-steel-combat-tools', 'preDeathAlpha') ?? 1;
-  const savedDisplayBars = tokenDoc.getFlag('draw-steel-combat-tools', 'savedDisplayBars');
+  const preTint = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'preDeathTint') ?? '#ffffff';
+  const preAlpha = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'preDeathAlpha') ?? 1;
+  const savedDisplayBars = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'savedDisplayBars');
   const restoreUpdate = {
     'texture.tint': preTint, alpha: preAlpha,
     flags: { [M]: {
@@ -2606,7 +2606,7 @@ const executeRevival = async (tokenId, { skipGroupHpUpdate = false } = {}) => {
   await tokenDoc.update(restoreUpdate);
 
   if (game.combat && !game.combat.combatants.find(c => c.tokenId === tokenId)) {
-    const savedGroupId = tokenDoc.getFlag('draw-steel-combat-tools', 'savedGroupId');
+    const savedGroupId = tokenDoc.getFlag('draw-steel-combat-tools-vicroms', 'savedGroupId');
     const group = savedGroupId ? game.combat.groups.get(savedGroupId) : null;
     const combatantData = { tokenId, sceneId: canvas.scene.id, actorId: tokenDoc.actorId };
     if (group) combatantData.group = savedGroupId;
@@ -2615,7 +2615,7 @@ const executeRevival = async (tokenId, { skipGroupHpUpdate = false } = {}) => {
       const minionMaxHP = tokenDoc.actor?.system?.stamina?.max ?? 0;
       if (minionMaxHP > 0) await group.update({ 'system.staminaValue': (group.system.staminaValue ?? 0) + minionMaxHP });
     }
-    if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools', 'savedGroupId');
+    if (savedGroupId) await tokenDoc.unsetFlag('draw-steel-combat-tools-vicroms', 'savedGroupId');
   }
 
   ui.notifications.info(game.i18n.format('DSCT.notice.dt.revived', { name: tokenDoc.name }));

@@ -7,7 +7,7 @@ import { registerMarkHooks } from './class-tactician/mark.mjs';
 export { openImNoThreatPanel, ImNoThreatSettingsMenu, getAnimals, INT_ANIMAL_DEFAULTS } from './class-shadow/im-no-threat.mjs';
 export { MARK_ABILITY_CONFIG } from './class-tactician/mark.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 export const registerAbilityInjectors = () => {
   registerImNoThreatHooks();

@@ -3,7 +3,7 @@
   "name": "DSCT: Distribute Abilities",
   "type": "script",
   "img": "icons/sundries/books/book-red-exclamation.webp",
-  "command": "// Distributes forced movement abilities (Knockback, etc.) from the Draw Steel compendium to every actor that doesn't already have them.\n// Safe to run multiple times - actors that already have all abilities are skipped automatically. GM only.\nawait game.modules.get('draw-steel-combat-tools').api.distributeAbilities();",
+  "command": "// Distributes forced movement abilities (Knockback, etc.) from the Draw Steel compendium to every actor that doesn't already have them.\n// Safe to run multiple times - actors that already have all abilities are skipped automatically. GM only.\nawait game.modules.get('draw-steel-combat-tools-vicroms').api.distributeAbilities();",
   "scope": "global",
   "sort": 1500,
   "folder": "DSCTfoldUT000001",

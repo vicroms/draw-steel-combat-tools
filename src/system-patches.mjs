@@ -5,7 +5,7 @@ import { DamageConditionsPanel } from './conditions/damage-conditions.mjs';
 import { runForcedMovement } from './forced-movement/forced-movement-engine.mjs';
 import { FmModifyPanel, replayModifiers, createModifierNoteDiv, persistStack } from './forced-movement/forced-movement-modify-panel.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 function _fmMakeLabel(state) {
   return [

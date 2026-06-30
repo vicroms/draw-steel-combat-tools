@@ -3,7 +3,7 @@
   "name": "DSCT: Aid Attack",
   "type": "script",
   "img": "icons/skills/social/diplomacy-handshake-blue.webp",
-  "command": "// Applies the Aid Attack edge to a target. Select one token (the aider) and target one token (the creature being aided against).\n// The edge automatically clears after the next ability roll is made against that target, or when combat ends.\nawait game.modules.get('draw-steel-combat-tools').api.aidAttack();",
+  "command": "// Applies the Aid Attack edge to a target. Select one token (the aider) and target one token (the creature being aided against).\n// The edge automatically clears after the next ability roll is made against that target, or when combat ends.\nawait game.modules.get('draw-steel-combat-tools-vicroms').api.aidAttack();",
   "scope": "global",
   "sort": 900,
   "folder": "DSCTfoldAA000001",

@@ -3,7 +3,7 @@
   "name": "DSCT: Judgement",
   "type": "script",
   "img": "icons/magic/death/skull-humanoid-white-red.webp",
-  "command": "// Applies the Judgement effect to the targeted token. Target exactly one token then run.\n// When the judged target dies, a prompt appears to use a free triggered action to apply Judgement to a new target.\nawait game.modules.get('draw-steel-combat-tools').api.judgement();",
+  "command": "// Applies the Judgement effect to the targeted token. Target exactly one token then run.\n// When the judged target dies, a prompt appears to use a free triggered action to apply Judgement to a new target.\nawait game.modules.get('draw-steel-combat-tools-vicroms').api.judgement();",
   "scope": "global",
   "sort": 700,
   "folder": "DSCTfoldAA000001",

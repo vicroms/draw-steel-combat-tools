@@ -10,10 +10,10 @@ const MACRO_SETTINGS = {
 export const installMacros = async ({ silent = false } = {}) => {
   if (!game.user.isGM) { ui.notifications.warn(game.i18n.localize('DSCT.notice.macros.gmOnly')); return; }
 
-  const pack = game.packs.get('draw-steel-combat-tools.macros');
+  const pack = game.packs.get('draw-steel-combat-tools-vicroms.macros');
   if (!pack) { ui.notifications.warn(game.i18n.localize('DSCT.notice.macros.packNotFound')); return; }
 
-  const M = 'draw-steel-combat-tools';
+  const M = 'draw-steel-combat-tools-vicroms';
 
   let rootFolder = game.folders.find(f => f.type === 'Macro' && f.name === MACRO_FOLDER_NAME);
   if (!rootFolder) rootFolder = await Folder.create({ name: MACRO_FOLDER_NAME, type: 'Macro' });

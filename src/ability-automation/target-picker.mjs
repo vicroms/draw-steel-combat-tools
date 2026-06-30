@@ -1,4 +1,4 @@
-import { getSetting, tokFootprintDist, getItemRange } from '../helpers.mjs';
+import { getSetting, tokFootprintDist, getItemRange, toGrid, toWorld, gridCellsWithinDistance } from '../helpers.mjs';
 import {
   setRaisedDeadVisible,
   addPreviewToken,
@@ -6,7 +6,7 @@ import {
   activateTokenLayer,
 } from '../death-tracker/defeated-token-visibility.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 
 const _dsctPreTargeted = new Set();
@@ -142,19 +142,25 @@ async function _runTargetPicker(ability, casterToken) {
   const drawHighlights = () => {
     canvas.interface.grid.clearHighlightLayer(hlName);
     if (range != null && range > 0) {
-      const gs  = canvas.grid.size;
       const cw  = Math.max(1, Math.round(casterToken.document.width));
       const ch  = Math.max(1, Math.round(casterToken.document.height));
-      const cx0 = Math.floor(casterToken.x / gs);
-      const cy0 = Math.floor(casterToken.y / gs);
-      for (let rx = cx0 - range; rx <= cx0 + cw - 1 + range; rx++) {
-        for (let ry = cy0 - range; ry <= cy0 + ch - 1 + range; ry++) {
-          if (rx >= cx0 && rx < cx0 + cw && ry >= cy0 && ry < cy0 + ch) continue;
-          const dx = Math.max(0, cx0 - rx, rx - (cx0 + cw - 1));
-          const dy = Math.max(0, cy0 - ry, ry - (cy0 + ch - 1));
-          if (Math.max(dx, dy) > range) continue;
-          canvas.interface.grid.highlightPosition(hlName, { x: rx * gs, y: ry * gs, color: 0x002211, border: 0x00CC66 });
+      const casterGrid = toGrid(casterToken.document);
+      const occupied = new Set();
+      const rangeCells = new Set();
+      for (let ix = 0; ix < cw; ix++) {
+        for (let iy = 0; iy < ch; iy++) {
+          const origin = { x: casterGrid.x + ix, y: casterGrid.y + iy };
+          occupied.add(`${origin.x},${origin.y}`);
+          for (const c of gridCellsWithinDistance(origin, range)) {
+            rangeCells.add(`${c.x},${c.y}`);
+          }
         }
+      }
+      for (const key of rangeCells) {
+        if (occupied.has(key)) continue;
+        const [x, y] = key.split(',').map(Number);
+        const topLeft = toWorld({ x, y });
+        canvas.interface.grid.highlightPosition(hlName, { x: topLeft.x, y: topLeft.y, color: 0x002211, border: 0x00CC66 });
       }
     }
     for (const t of validTokens) {
@@ -170,11 +176,11 @@ async function _runTargetPicker(ability, casterToken) {
                    :          (ally ? 0xAA4400 : 0x2244AA);
       const w = Math.max(1, Math.round(t.document.width));
       const h = Math.max(1, Math.round(t.document.height));
+      const tg = toGrid(t.document);
       for (let dx = 0; dx < w; dx++) {
         for (let dy = 0; dy < h; dy++) {
-          const gx = Math.floor(t.x / canvas.grid.size) * canvas.grid.size + dx * canvas.grid.size;
-          const gy = Math.floor(t.y / canvas.grid.size) * canvas.grid.size + dy * canvas.grid.size;
-          canvas.interface.grid.highlightPosition(hlName, { x: gx, y: gy, color, border });
+          const topLeft = toWorld({ x: tg.x + dx, y: tg.y + dy });
+          canvas.interface.grid.highlightPosition(hlName, { x: topLeft.x, y: topLeft.y, color, border });
         }
       }
     }
@@ -309,7 +315,6 @@ export function setFoundryTargets(tokens) {
 
 function _drawTokenHighlights(hlName, tokens, selectedIds = null, hoverIds = null) {
   canvas.interface.grid.clearHighlightLayer(hlName);
-  const GS = canvas.grid.size;
   for (const t of tokens) {
     const sel   = selectedIds ? selectedIds.has(t.id) : false;
     const hover = hoverIds    ? hoverIds.has(t.id)    : false;
@@ -317,11 +322,11 @@ function _drawTokenHighlights(hlName, tokens, selectedIds = null, hoverIds = nul
     const border = sel ? 0x228822 : (hover ? 0x1188CC : 0x2244AA);
     const w = Math.max(1, Math.round(t.document.width));
     const h = Math.max(1, Math.round(t.document.height));
+    const tg = toGrid(t.document);
     for (let dx = 0; dx < w; dx++) {
       for (let dy = 0; dy < h; dy++) {
-        const gx = Math.floor(t.x / GS) * GS + dx * GS;
-        const gy = Math.floor(t.y / GS) * GS + dy * GS;
-        canvas.interface.grid.highlightPosition(hlName, { x: gx, y: gy, color, border });
+        const topLeft = toWorld({ x: tg.x + dx, y: tg.y + dy });
+        canvas.interface.grid.highlightPosition(hlName, { x: topLeft.x, y: topLeft.y, color, border });
       }
     }
   }
@@ -587,7 +592,6 @@ export async function runColoredTokenPicker({ tokens, colorMap, hint }) {
   if (canvas.interface.grid.highlightLayers[hlName]) canvas.interface.grid.destroyHighlightLayer(hlName);
   canvas.interface.grid.addHighlightLayer(hlName);
 
-  const GS = canvas.grid.size;
   const drawHighlights = (hoverId = null) => {
     canvas.interface.grid.clearHighlightLayer(hlName);
     for (const t of tokens) {
@@ -596,11 +600,13 @@ export async function runColoredTokenPicker({ tokens, colorMap, hint }) {
       const border = _darkenHex(base);
       const w = Math.max(1, Math.round(t.document.width));
       const h = Math.max(1, Math.round(t.document.height));
+      const tg = toGrid(t.document);
       for (let dx = 0; dx < w; dx++) {
         for (let dy = 0; dy < h; dy++) {
+          const topLeft = toWorld({ x: tg.x + dx, y: tg.y + dy });
           canvas.interface.grid.highlightPosition(hlName, {
-            x: Math.floor(t.x / GS) * GS + dx * GS,
-            y: Math.floor(t.y / GS) * GS + dy * GS,
+            x: topLeft.x,
+            y: topLeft.y,
             color, border,
           });
         }

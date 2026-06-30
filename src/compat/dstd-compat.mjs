@@ -11,7 +11,7 @@ import { _pendingSquadMap, consumePendingSquadMap } from '../ability-automation/
 const DSTD       = 'draw-steel-target-damage';
 const DSTD_PANEL = `section.${DSTD}-panel`;
 const DSTD_ROW   = `.${DSTD}-target-row[data-target-key]`;
-const M          = 'draw-steel-combat-tools';
+const M          = 'draw-steel-combat-tools-vicroms';
 
 
 const _fmState = new Map();

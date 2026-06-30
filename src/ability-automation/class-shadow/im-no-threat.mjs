@@ -1,6 +1,6 @@
 import { getSetting, getModuleApi } from '../../helpers.mjs';
 
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 const _INT_EFFECT_ABILITY = {
   name: "I'm No Threat",
@@ -256,7 +256,7 @@ class ImNoThreatPanel extends ds.applications.api.DSApplication {
     if (freeMimic) {
       const spendMsgId = freeMimicsByActor.get(this._actor.id);
       freeMimicsByActor.delete(this._actor.id);
-      if (spendMsgId) game.messages.get(spendMsgId)?.setFlag('draw-steel-combat-tools', 'intFreeMimicUsed', true);
+      if (spendMsgId) game.messages.get(spendMsgId)?.setFlag('draw-steel-combat-tools-vicroms', 'intFreeMimicUsed', true);
     } else if (isHero && inCombat) {
       await this._actor.update({ 'system.hero.primary.value': this._actor.system.hero.primary.value - 1 });
     } else if (isHero) {
@@ -673,7 +673,7 @@ export const registerImNoThreatHooks = () => {
     if (getSetting('imNoThreatEnabled') && dsid === 'im-no-threat') {
       const actorId       = msg.speaker?.actor ?? null;
       const spendDetected = !!(actorId && msg.flavor?.toLowerCase().startsWith('spent '));
-      const mimicUsed     = !!msg.getFlag('draw-steel-combat-tools', 'intFreeMimicUsed');
+      const mimicUsed     = !!msg.getFlag('draw-steel-combat-tools-vicroms', 'intFreeMimicUsed');
 
       if (spendDetected && !mimicUsed && !grantedMimicMsgs.has(msg.id)) {
         freeMimicsByActor.set(actorId, msg.id);

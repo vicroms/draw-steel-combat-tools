@@ -1,4 +1,4 @@
-const M = 'draw-steel-combat-tools';
+const M = 'draw-steel-combat-tools-vicroms';
 
 let _hoveredTokenId = null;
 let _controlledTokenIds = new Set();
